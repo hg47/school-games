@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Наведи лад — гра для 5 класу</title>
+<meta name="description" content="Інтерактивний тренажер до теми «Операційна система, файли та папки»: сортування файлів по папках, правильні імена файлів, операції та Кошик. Для 5 класу.">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/game.css">
+<script src="../assets/theme.js"></script>
+<script src="../supabase-config.js"></script>
+<script src="../assets/db.js"></script>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml" data-head-v1>
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="logo"><span class="dot"></span>Наведи лад</div>
+    <div class="spacer"></div>
+    <div class="dots" id="dots" aria-hidden="true"></div>
+    <div class="stars">⭐ <b id="stars">0</b></div>
+  </div>
+
+  <div class="card">
+    <div class="head">
+      <div class="bit bit-img" aria-hidden="true"><img src="../bit.svg" alt="" width="56" height="56"></div>
+      <div class="bubble" id="say">Привіт! Я робот <b>Біт</b>. Мій комп'ютер геть заплутався — допоможеш навести лад?</div>
+    </div>
+    <div class="stage" id="stage"></div>
+    <div class="actions" style="padding:0 18px 22px">
+      <button class="btn" id="next">Почати →</button>
+    </div>
+  </div>
+
+  <footer>Тренажер до теми «Операційна система, файли та папки» · 5 клас<br><span class="sig" data-sig>© 2025–2026 Процюк О. К. · вчитель інформатики · Харківський ліцей № 47</span><br><a class="doclink" data-doc href="../about.html">Про сайт і дані</a></footer>
+</div>
+<div class="flash" id="flash" aria-hidden="true">⭐</div>
+
+<script>
+(() => {
+  "use strict";
+  const PLAY = (()=>{ try{ return JSON.parse(sessionStorage.getItem('play')||'null'); }catch(e){ return null; } })();
+  if(!PLAY || PLAY.game_slug !== 'naved-lad'){ location.replace('../index.html'); return; }
+  (function(){ var s0=document.getElementById('say'); if(s0) s0.innerHTML='\u041f\u0440\u0438\u0432\u0456\u0442, <b>'+(PLAY.student_name||'\u0434\u0440\u0443\u0436\u0435')+'</b>! \u042f \u0440\u043e\u0431\u043e\u0442 \u0411\u0456\u0442. \u0414\u043e\u043f\u043e\u043c\u043e\u0436\u0438 \u043d\u0430\u0432\u0435\u0441\u0442\u0438 \u043b\u0430\u0434. \u0421\u043f\u0440\u043e\u0431 \u043b\u0438\u0448\u0438\u043b\u043e\u0441\u044c: <b>'+(PLAY.remaining!=null?PLAY.remaining:'?')+'</b>.'; })();
+  const $ = id => document.getElementById(id);
+  const stage=$("stage"), say=$("say"), nextBtn=$("next"), starsEl=$("stars"), dotsEl=$("dots");
+  let stars=0, round=0, mistakes=0;
+  const TOTAL_ROUNDS=4;
+
+  // крапки-прогрес
+  for(let i=0;i<TOTAL_ROUNDS;i++){const d=document.createElement("i"); dotsEl.appendChild(d);}
+  const paintDots=()=>{[...dotsEl.children].forEach((d,i)=>{d.className = i<round?"done":(i===round?"on":"");});};
+
+  const icon = name => {
+    const ext=(name.split(".").pop()||"").toLowerCase();
+    if(["docx","pdf","txt","pptx","doc"].includes(ext)) return "📄";
+    if(["exe"].includes(ext)) return "🎮";
+    if(["mp3","wav"].includes(ext)) return "🎵";
+    if(["jpg","jpeg","png","bmp","gif"].includes(ext)) return "🖼️";
+    return "📄";
+  };
+  const addStar = (n=1) => {
+    stars+=n; starsEl.textContent=stars;
+    const f=$("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
+  };
+  const bit = html => { say.innerHTML=html; };
+
+  // ═══════════════ РАУНД 1 — Сортування ═══════════════
+  function round1(){
+    bit("Розклади файли по <b>папках</b>: спочатку торкнись файла, потім — потрібної папки.");
+    const files=[
+      {n:"реферат.docx",f:"Навчання"},{n:"задача.pdf",f:"Навчання"},
+      {n:"minecraft.exe",f:"Ігри"},{n:"roblox.exe",f:"Ігри"},
+      {n:"пісня.mp3",f:"Медіа"},{n:"котик.jpg",f:"Медіа"},
+    ];
+    const folders=["Навчання","Ігри","Медіа"];
+    let sel=null, left=files.length;
+    stage.innerHTML=`<p class="task">Наведи лад на робочому столі 🗂️</p>
+      <div class="pool" id="pool"></div>
+      <div class="targets" id="targets"></div>`;
+    const pool=$("pool"), targets=$("targets");
+    files.forEach((f,i)=>{
+      const b=document.createElement("button"); b.className="tile"; b.dataset.i=i;
+      b.innerHTML=`<span class="ic">${icon(f.n)}</span>${f.n}`;
+      b.onclick=()=>{ if(b.classList.contains("gone"))return;
+        [...pool.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); targets.classList.add("armed"); sel=f; sel.el=b;
+        bit(`Файл <b>${f.n}</b> обрано. Тепер торкнись папки, куди він підходить.`); };
+      pool.appendChild(b);
+    });
+    const counts={}; folders.forEach(x=>counts[x]=0);
+    folders.forEach(name=>{
+      const d=document.createElement("div"); d.className="folder"; d.tabIndex=0; d.setAttribute("role","button");
+      d.innerHTML=`<div class="fic">📁</div><div class="fname">${name}</div><div class="cnt" data-c="${name}">0 файлів</div>`;
+      const act=()=>{
+        if(!sel){ bit("Спочатку торкнись <b>файла</b>, а потім папки 🙂"); d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300); return; }
+        if(sel.f===name){
+          sel.el.classList.add("gone"); counts[name]++; d.querySelector(".cnt").textContent=counts[name]+" файл(ів)";
+          d.classList.add("hit"); setTimeout(()=>d.classList.remove("hit"),300);
+          addStar(); left--; sel=null; targets.classList.remove("armed");
+          if(left===0){ bit("Ідеально! Робочий стіл чистий ✨"); done(); }
+          else bit("Правильно! Клас 👍 Наступний файл?");
+        } else {
+          d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300);
+          mistakes++; bit(`Хм, <b>${sel.n}</b> сюди не пасує. Подумай: це навчання, гра чи медіа?`);
+        }
+      };
+      d.onclick=act; d.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();act();}};
+      targets.appendChild(d);
+    });
+    lockNext();
+  }
+
+  // ═══════════════ РАУНД 2 — Правильне ім'я ═══════════════
+  function round2(){
+    bit("Не всі імена файлів дозволені! Познач <b>лише правильні</b>. Заборонені символи: <b>\\ / : * ? \" &lt; &gt; |</b>");
+    const items=[
+      {n:"звіт.docx",ok:true},{n:"фото?.jpg",ok:false,s:"?"},
+      {n:"мій_проєкт.pptx",ok:true},{n:"гра*.exe",ok:false,s:"*"},
+      {n:"урок-5.pdf",ok:true},{n:'текст/новий.txt',ok:false,s:"/"},
+      {n:"фото2024.jpg",ok:true},{n:"файл|1.doc",ok:false,s:"|"},
+    ];
+    let foundGood=0; const totalGood=items.filter(x=>x.ok).length;
+    stage.innerHTML=`<p class="task">Познач лише ПРАВИЛЬНІ імена файлів ✍️</p><div class="pool" id="pool"></div>`;
+    const pool=$("pool");
+    items.forEach(it=>{
+      const b=document.createElement("button"); b.className="tile"; b.style.minWidth="150px";
+      b.innerHTML=`<span class="pbox" aria-hidden="true">\u2713</span>${it.n}`;
+      b.onclick=()=>{
+        if(b.dataset.done)return;
+        if(it.ok){ b.classList.add("ok"); b.dataset.done=1; addStar(); foundGood++;
+          bit("Так, це коректне ім'я ✅"); if(foundGood===totalGood){ bit("Ти знайшов усі правильні імена! 🎯"); done(); } }
+        else { const bx=b.querySelector(".pbox"); b.classList.add("err");
+          if(bx) bx.textContent="\u2715";
+          setTimeout(()=>{ b.classList.remove("err"); if(bx) bx.textContent="\u2713"; },900);
+          mistakes++; bit(`Ні! У цьому імені є заборонений символ «<b>${it.s}</b>» — так файл назвати не можна.`); }
+      };
+      pool.appendChild(b);
+    });
+    lockNext();
+  }
+
+  // ═══════════════ РАУНД 3 — Операції ═══════════════
+  function round3(){
+    const q=[
+      {t:"Зробити зовсім новий об'єкт",a:"Створити"},
+      {t:"Дати файлу нове ім'я",a:"Перейменувати"},
+      {t:"Зробити копію — оригінал лишається на місці",a:"Копіювати"},
+      {t:"Перенести в інше місце — зі старого зникає",a:"Перемістити"},
+      {t:"Прибрати файл у Кошик",a:"Видалити"},
+    ];
+    const ops=["Створити","Перейменувати","Копіювати","Перемістити","Видалити"];
+    let qi=0;
+    bit("Впізнай <b>операцію</b> за описом. Тисни правильну кнопку.");
+    const render=()=>{
+      stage.innerHTML=`<p class="task">Що це за операція? (${qi+1} / ${q.length})</p>
+        <div class="prompt">${q[qi].t}</div><div class="ops" id="ops"></div>`;
+      const box=$("ops");
+      ops.forEach(o=>{
+        const b=document.createElement("button"); b.className="op"; b.textContent=o;
+        b.onclick=()=>{
+          if(o===q[qi].a){ b.classList.add("ok"); addStar(); qi++;
+            if(qi<q.length){ bit("Точно! 🔥"); setTimeout(render,550); }
+            else { bit("Ти знаєш усі операції над файлами! 💪"); done(); } }
+          else { b.classList.add("err"); setTimeout(()=>b.classList.remove("err"),400);
+            mistakes++; bit("Не зовсім. Перечитай опис уважно 👀"); }
+        };
+        box.appendChild(b);
+      });
+    };
+    render(); lockNext();
+  }
+
+  // ═══════════════ РАУНД 4 — Кошик ═══════════════
+  function round4(){
+    bit("Останнє! Розберемось із <b>Кошиком</b>: видалене потрапляє туди, і його можна повернути.");
+    let phase=1, inBin=false;
+    stage.innerHTML=`<p class="task" id="t4">Крок 1: видали <b>непотрібний</b> файл — торкнись його, потім Кошика</p>
+      <div class="pool" id="pool"></div>
+      <div class="bin" id="bin" tabindex="0" role="button">
+        <div class="fic">🗑️</div><div class="fname" style="font-weight:800;color:var(--ink)">Кошик</div>
+        <div class="cnt" id="bincnt">порожній</div>
+      </div>`;
+    const pool=$("pool"), bin=$("bin"), t4=$("t4"), bincnt=$("bincnt");
+    const files=[{n:"реферат.docx",keep:true},{n:"сміття.tmp",keep:false}];
+    let sel=null;
+    const drawPool=()=>{
+      pool.innerHTML="";
+      files.forEach((f)=>{
+        const b=document.createElement("button"); b.className="tile"; b.style.minWidth="150px";
+        b.innerHTML=`<span class="ic">${f.keep?"📄":"🗑️"}</span>${f.n}`;
+        b.onclick=()=>{ [...pool.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); sel={f,el:b};
+          bit(`Обрано <b>${f.n}</b>.`); };
+        pool.appendChild(b);
+      });
+    };
+    drawPool();
+    const armBin=()=>{bin.classList.add("armed");};
+    bin.onmouseenter=armBin; bin.onfocus=armBin;
+    const binAct=()=>{
+      if(phase===1){
+        if(!sel){ bit("Спочатку торкнись файла, який хочеш видалити."); return; }
+        if(sel.f.keep){ mistakes++; bit("Обережно! <b>реферат.docx</b> потрібний. Видаляємо <b>сміття.tmp</b>."); return; }
+        // видаляємо сміття
+        files.splice(files.indexOf(sel.f),1); inBin=true; bincnt.textContent="1 файл (сміття.tmp)";
+        drawPool(); sel=null; addStar();
+        bin.classList.add("hit"); setTimeout(()=>bin.classList.remove("hit"),300);
+        phase=2;
+        t4.innerHTML='Крок 2: ой! Ти згадав, що файл ще потрібен 😅 <b>Віднови</b> його — торкнись Кошика';
+        bit("Файл у Кошику. Але його можна <b>відновити</b>! Торкнись Кошика ще раз.");
+      } else if(phase===2){
+        if(!inBin){ return; }
+        files.push({n:"сміття.tmp",keep:true}); inBin=false; bincnt.textContent="порожній";
+        drawPool(); addStar();
+        bin.classList.add("hit"); setTimeout(()=>bin.classList.remove("hit"),300);
+        bit("Готово! Бачиш — з Кошика файл повертається. Тому не бійся видаляти 🙂");
+        done();
+      }
+    };
+    bin.onclick=binAct; bin.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();binAct();}};
+    lockNext();
+  }
+
+  // ═══════════════ Фінал ═══════════════
+  function finale(){
+    dotsEl.querySelectorAll("i").forEach(d=>d.className="done");
+    document.querySelector(".card .actions").style.display="none";
+    const MAX=17;
+    const earned = Math.max(0, MAX - mistakes);
+    const localGrade = Math.max(1, Math.round(1+11*earned/MAX));
+    say.innerHTML="\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u044e \u0442\u0432\u0456\u0439 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u2026 \u23F3";
+    stage.innerHTML='<div class="win"><div class="big">\u23F3</div><h2>\u0420\u0430\u0445\u0443\u0454\u043c\u043e \u043e\u0446\u0456\u043d\u043a\u0443\u2026</h2></div>';
+    const finish = (grade, remaining, note) => {
+      const canRetry = remaining > 0;
+      say.innerHTML="\u0422\u0438 \u043d\u0430\u0432\u0456\u0432 \u043b\u0430\u0434 \u0443 \u043a\u043e\u043c\u043f'\u044e\u0442\u0435\u0440\u0456 \u0411\u0456\u0442\u0430! \u041c\u043e\u043b\u043e\u0434\u0435\u0446\u044c! \uD83C\uDF89";
+      stage.innerHTML=`<div class="win">
+        <div class="big">\uD83C\uDFC6</div>
+        <h2>\u041b\u0430\u0434 \u043d\u0430\u0432\u0435\u0434\u0435\u043d\u043e!</h2>
+        <div class="score">\u2B50 ${earned} / ${MAX} (помилок: ${mistakes})</div>
+        <div class="score" style="color:var(--ok)">\u041e\u0446\u0456\u043d\u043a\u0430: ${grade} / 12</div>
+        <p>${note}</p>
+        ${canRetry ? '<button class="btn" id="again">\u0421\u043f\u0440\u043e\u0431\u0443\u0432\u0430\u0442\u0438 \u0449\u0435 \u0440\u0430\u0437 \u21BA</button>' : '<button class="btn ghost" id="home">\u0412\u0438\u0439\u0442\u0438 \u21A9</button>'}
+      </div>`;
+      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; starsEl.textContent=0;
+        document.querySelector(".card .actions").style.display="flex";
+        nextBtn.textContent="\u041f\u043e\u0447\u0430\u0442\u0438 \u2192"; nextBtn.disabled=false; paintDots();
+        say.innerHTML="\u0429\u0435 \u0441\u043f\u0440\u043e\u0431\u0430 \u2014 \u043f\u043e\u043a\u0430\u0436\u0438 \u043c\u0430\u043a\u0441\u0438\u043c\u0443\u043c! \uD83D\uDE80"; stage.innerHTML=""; };
+      const home=$("home"); if(home) home.onclick=()=>{ location.href="../index.html"; };
+    };
+    if(window.submitResult){
+      window.submitResult(earned).then(res=>{
+        if(res && res.ok){
+          finish(res.grade, (res.remaining!=null?res.remaining:0),
+            (res.remaining>0 ? ("\u0417\u0430\u043b\u0438\u0448\u0438\u043b\u043e\u0441\u044c \u0441\u043f\u0440\u043e\u0431: "+res.remaining+" \u2014 \u043c\u043e\u0436\u0435\u0448 \u043f\u043e\u043a\u0440\u0430\u0449\u0438\u0442\u0438.") : "\u0421\u043f\u0440\u043e\u0431\u0438 \u0432\u0438\u043a\u043e\u0440\u0438\u0441\u0442\u0430\u043d\u043e. \u0417\u0430\u0440\u0430\u0445\u043e\u0432\u0430\u043d\u043e \u043d\u0430\u0439\u043a\u0440\u0430\u0449\u0438\u0439 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442."));
+        } else if(res && res.error && /\u0432\u0438\u0447\u0435\u0440\u043f\u0430\u043d\u043e/i.test(res.error)){
+          finish(localGrade, 0, "\u0422\u0438 \u0432\u0436\u0435 \u0432\u0438\u043a\u043e\u0440\u0438\u0441\u0442\u0430\u0432 \u0443\u0441\u0456 \u0441\u043f\u0440\u043e\u0431\u0438.");
+        } else {
+          finish(localGrade, 0, "\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u2014 \u043f\u043e\u043a\u0430\u0436\u0438 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0443\u0447\u0438\u0442\u0435\u043b\u044e.");
+        }
+      }).catch(()=>finish(localGrade,0,"\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u2014 \u043f\u043e\u043a\u0430\u0436\u0438 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0443\u0447\u0438\u0442\u0435\u043b\u044e."));
+    } else {
+      finish(localGrade, 0, "\u0414\u0435\u043c\u043e-\u0440\u0435\u0436\u0438\u043c.");
+    }
+  }
+
+  // \u2550\u2550\u2550 \u041a\u0435\u0440\u0443\u0432\u0430\u043d\u043d\u044f \u0440\u0430\u0443\u043d\u0434\u0430\u043c\u0438 ═══════════════
+  const rounds=[round1,round2,round3,round4];
+  function lockNext(){ nextBtn.disabled=true; nextBtn.textContent="Виконуй завдання…"; }
+  function done(){ nextBtn.disabled=false; nextBtn.textContent = round<TOTAL_ROUNDS-1 ? "Далі →" : "Фінал 🏁"; }
+
+  nextBtn.onclick=()=>{
+    if(round>=TOTAL_ROUNDS){ return; }
+    // якщо ще не грали в поточний — запускаємо; якщо виконали — йдемо далі
+    if(nextBtn.textContent.startsWith("Почати") || nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")){
+      if(nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")) round++;
+      if(round>=TOTAL_ROUNDS){ finale(); return; }
+      paintDots(); rounds[round]();
+    }
+  };
+  paintDots();
+})();
+</script>
+</body>
+</html>

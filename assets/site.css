@@ -1,0 +1,214 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   САЙТ НАВЧАЛЬНИХ ІГОР · спільні токени й базові елементи
+   Дизайн «живий градієнт» — обраний на прототипі (preview.html).
+
+   Підключають: index.html, demo.html, admin.html, games/*.html
+   Ігри беруть іще assets/game.css (оболонка гри й раунди).
+
+   ⚠️ ТЕМА: три стани — авто / світла / темна, кнопка в assets/theme.js.
+      Тут немає жодного @media (prefers-color-scheme) І ЦЕ НАВМИСНО:
+      «авто» розбирає сам js — він читає системну настройку й проставляє
+      html[data-theme="light"|"dark"] конкретним значенням. Завдяки цьому
+      світла палітра описана ОДИН раз, а не двічі (у media-запиті й у
+      блоці атрибута), і копії не можуть розійтися.
+      ⚠️ Наслідок: без js сторінка отримає темну гаму. Це прийнятно —
+      без js тут не працює ні вхід за кодом, ні сама гра.
+
+   ⚠️ РІЗНИЦЯ ТЕМ ЗІБРАНА В ТОКЕНАХ (--btn-grad, --plume-opacity тощо),
+      а не в дублях правил. Тому компоненти нижче написані ОДИН раз.
+      Додаєш колір — правиш два блоки токенів, і все.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── ТОКЕНИ · темна гама (база) ──────────────────────────────────────── */
+:root{
+  color-scheme:dark;   /* щоб смуги прокрутки й списки <select> були в тон */
+  --font:"Segoe UI Variable Display","Segoe UI Variable Text",system-ui,
+         -apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,monospace;
+
+  --fs-hero:clamp(25px,5.2vw,34px);
+  --fs-h2:clamp(18px,3.4vw,22px);
+  --fs-body:clamp(15px,2.5vw,16px);
+  --fs-sm:13.5px;
+  --fs-xs:12px;
+
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:44px;
+  --r-sm:10px; --r-md:14px; --r-lg:22px; --r-full:999px;
+
+  --bg:#07070c; --bg-2:#07070c;
+  --surface:#0f1017; --surface-2:#151723;
+  --line:#242634; --line-2:#393d52;
+  --ink:#f1f2f7; --ink-2:#a8adc2; --ink-3:#6d7391;
+
+  --brand:#7c5cff; --brand-ring:color-mix(in srgb,#7c5cff 30%,transparent);
+  --accent:#ff7a2f; --accent-2:#ff8f4d; --accent-soft:#2a1408; --accent-ink:#180a02;
+  --ok:#3ee6a0; --ok-soft:#08251b; --ok-line:#1d5f45;
+  --bad:#ff6b6b; --bad-soft:#2a1113; --bad-line:#6b2630;
+  --star:#ffc95c;
+
+  --sh1:0 1px 2px rgba(0,0,0,.5);
+  --sh2:0 6px 20px -8px rgba(0,0,0,.7);
+  --sh3:0 30px 70px -34px rgba(0,0,0,.9);
+
+  --card-bg:color-mix(in srgb,var(--surface) 88%,transparent);
+  --card-border:1px solid rgba(255,255,255,.07);
+  --card-shadow:0 30px 70px -34px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.05);
+
+  /* світні плями тла */
+  --plume-opacity:.42; --plume-blur:85px;
+  /* акцентні градієнти */
+  --btn-grad:linear-gradient(135deg,#ff7a2f,#ff5f8a);
+  --btn-shadow:0 10px 30px -10px rgba(255,122,47,.6);
+  --mark-grad:linear-gradient(135deg,#ff7a2f,#ff5f8a 55%,#7c5cff);
+  --title-grad:linear-gradient(135deg,#ff9a4d,#ff5f8a 55%,#7c5cff);
+  --glow-on:0 0 12px color-mix(in srgb,var(--accent) 75%,transparent);
+}
+
+/* ─── ТОКЕНИ · світла гама ────────────────────────────────────────────────
+   Та сама гама (оранж → рожевий → фіалковий), але:
+   ⚠️ світіння прибрано — на білому воно читається як брудна пляма;
+   ⚠️ кольори глибші, бо неон на білому не має контрасту.
+   Спрацьовує, коли theme.js проставив data-theme="light" — і за вибором
+   «світла», і за «авто», якщо в системі світла тема.
+   ──────────────────────────────────────────────────────────────────────── */
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:#faf9ff; --bg-2:#ffffff;
+  --surface:#ffffff; --surface-2:#f7f6fd;
+  --line:#e8e6f4; --line-2:#d3d0e6;
+  --ink:#17162b; --ink-2:#4c4a68; --ink-3:#8a87a4;
+
+  --brand:#6244e8; --brand-ring:color-mix(in srgb,#6244e8 20%,transparent);
+  --accent:#e2560c; --accent-2:#c8480a; --accent-soft:#fff2ea; --accent-ink:#ffffff;
+  --ok:#0f9d68; --ok-soft:#eefbf4; --ok-line:#a7e3c6;
+  --bad:#d92d20; --bad-soft:#fef4f3; --bad-line:#f3b5b0;
+  --star:#dd9c06;
+
+  --sh1:0 1px 2px rgba(72,50,160,.06);
+  --sh2:0 6px 18px -8px rgba(72,50,160,.16);
+  --sh3:0 20px 48px -26px rgba(72,50,160,.22);
+
+  --card-bg:color-mix(in srgb,#fff 92%,transparent);
+  --card-border:1px solid var(--line);
+  --card-shadow:0 20px 48px -26px rgba(72,50,160,.22), inset 0 1px 0 #fff;
+
+  --plume-opacity:.16; --plume-blur:95px;
+  --btn-grad:linear-gradient(135deg,#f0620c,#e0356f);
+  --btn-shadow:0 10px 24px -12px rgba(224,53,111,.5);
+  --title-grad:linear-gradient(135deg,#e2560c,#d62e6b 55%,#6244e8);
+  --glow-on:none;
+}
+
+/* ─── БАЗА ────────────────────────────────────────────────────────────── */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; background:var(--bg)}
+body{
+  margin:0; min-height:100vh; background:transparent;
+  font-family:var(--font); font-size:var(--fs-body); line-height:1.55; color:var(--ink);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+/* ⚠️ z-index:-1, а не 0: тоді плями лягають ПІД увесь вміст сторінки й не
+   треба піднімати кожну обгортку через position/z-index. Працює тому, що
+   тло body прозоре, а колір тримає html. */
+body::after{
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(30% 26% at 18% 20%,#ff7a2f 0%,transparent 60%),
+    radial-gradient(28% 24% at 82% 28%,#7c5cff 0%,transparent 60%),
+    radial-gradient(32% 28% at 55% 88%,#2f7de0 0%,transparent 60%);
+  filter:blur(var(--plume-blur)); opacity:var(--plume-opacity);
+  animation:drift 36s ease-in-out infinite alternate;
+}
+h1,h2,h3{margin:0; line-height:1.2; font-weight:650; letter-spacing:-.021em}
+p{margin:0}
+button,input,select,textarea{font-family:inherit; font-size:inherit; color:inherit}
+::selection{background:color-mix(in srgb,var(--accent) 35%,transparent)}
+
+/* ─── КАРТКА ──────────────────────────────────────────────────────────── */
+.card{
+  background:var(--card-bg); border:var(--card-border); border-radius:var(--r-lg);
+  box-shadow:var(--card-shadow); overflow:hidden;
+}
+
+/* ─── КНОПКИ ──────────────────────────────────────────────────────────── */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:var(--s2);
+  min-height:48px; padding:0 var(--s5); cursor:pointer;
+  border:1px solid transparent; border-radius:var(--r-full);
+  font-size:var(--fs-body); font-weight:650; letter-spacing:-.005em; text-decoration:none;
+  background:var(--btn-grad); color:#fff; box-shadow:var(--btn-shadow);
+  transition:filter .15s, transform .08s, box-shadow .15s, background .15s;
+}
+.btn:hover{filter:brightness(1.07)}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+.btn[disabled]{opacity:.45; cursor:not-allowed; filter:none; box-shadow:none}
+.btn.ghost{
+  background:var(--surface); color:var(--ink);
+  border-color:var(--line-2); box-shadow:none;
+}
+.btn.ghost:hover{background:var(--surface-2); filter:none; border-color:var(--accent)}
+
+/* ─── ПОЛЯ ────────────────────────────────────────────────────────────── */
+.field{
+  width:100%; padding:15px var(--s4); border:1px solid var(--line-2); border-radius:var(--r-md);
+  background:var(--surface-2); color:var(--ink);
+  font-size:24px; font-weight:700; letter-spacing:.22em; text-align:center; text-transform:uppercase;
+  transition:border-color .15s, box-shadow .15s, background .15s;
+}
+.field::placeholder{color:var(--ink-3); font-weight:600; letter-spacing:.18em}
+.field:focus{outline:none; border-color:var(--brand); background:var(--surface);
+  box-shadow:0 0 0 4px var(--brand-ring)}
+
+/* ─── ДРІБНИЦІ ────────────────────────────────────────────────────────── */
+/* знак сайту: джойстик на власному градієнті — читається як логотип */
+.mark{
+  width:68px; height:68px; margin:0 auto var(--s4); border-radius:20px;
+  display:grid; place-items:center; font-size:36px; line-height:1;
+  background:var(--mark-grad); border:1px solid transparent;
+  box-shadow:0 10px 26px -12px rgba(255,95,138,.55);
+}
+.badge{
+  font-size:var(--fs-xs); font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--accent); background:var(--accent-soft);
+  border:1px solid color-mix(in srgb,var(--accent) 24%,transparent);
+  padding:5px 10px; border-radius:var(--r-full);
+}
+.divider{
+  display:flex; align-items:center; gap:var(--s3); margin:var(--s5) 0 var(--s4);
+  color:var(--ink-3); font-size:var(--fs-xs); font-weight:650;
+}
+.divider::before,.divider::after{content:""; flex:1; height:1px; background:var(--line)}
+
+/* ─── КНОПКА ТЕМИ ─────────────────────────────────────────────────────────
+   Розмітку не додаємо в 12 файлів — кнопку створює assets/theme.js:
+   у шапку .top, де вона є (демо й ігри), інакше в куток екрана. */
+.themebtn{
+  flex:none; display:grid; place-items:center; width:36px; height:36px; padding:0;
+  cursor:pointer; border-radius:var(--r-full); color:var(--ink-2);
+  background:var(--surface); border:1px solid var(--line); box-shadow:var(--sh1);
+  transition:color .15s, border-color .15s, background .15s;
+}
+.themebtn:hover{color:var(--ink); border-color:var(--line-2); background:var(--surface-2)}
+.themebtn:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+.themebtn svg{display:block; width:18px; height:18px}
+.themebtn-fixed{position:fixed; top:var(--s4); right:var(--s4); z-index:6}
+
+.doclink{display:inline-block; margin-top:var(--s1); color:var(--ink-3);
+  font-size:var(--fs-xs); text-decoration:underline; text-underline-offset:2px;
+  text-decoration-color:var(--line-2)}
+.doclink:hover{color:var(--ink-2); text-decoration-color:var(--ink-3)}
+
+footer{text-align:center; color:var(--ink-3); font-size:var(--fs-xs); line-height:1.55}
+footer .sig,.sig{display:block; margin-top:var(--s1)}
+footer b,.sig b{color:var(--ink-2); font-weight:650}
+
+/* ─── АНІМАЦІЇ ────────────────────────────────────────────────────────── */
+@keyframes drift{to{transform:translate3d(0,-4%,0) scale(1.09)}}
+@keyframes rise{from{opacity:0; transform:translateY(9px)} to{opacity:1; transform:none}}
+@keyframes pop{50%{transform:scale(1.05)}}
+@keyframes shake{25%{transform:translateX(-5px)} 75%{transform:translateX(5px)}}
+@keyframes flash{0%{opacity:0; transform:scale(.5)} 40%{opacity:1; transform:scale(1.1)} 100%{opacity:0; transform:scale(1.3)}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important; transition:none !important}
+}

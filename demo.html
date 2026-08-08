@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Демо — сайт навчальних ігор</title>
+<meta name="description" content="Демонстраційна гра: як працює сайт навчальних ігор — вхід за кодом, бал 1–12 на сервері, спроби, адмін-панель, експорт для Мрії.">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/game.css">
+<script src="assets/theme.js"></script>
+<style>
+  /* тільки те, що є лише в демо */
+  .actions{margin-top:0}
+  .intro{padding:var(--s5) var(--s4)}
+  .intro h1{font-size:var(--fs-hero); margin-bottom:var(--s2); text-wrap:balance}
+  .intro .lede{color:var(--ink-2); font-size:var(--fs-sm); margin-bottom:var(--s5); line-height:1.5}
+  .steps{display:grid; gap:var(--s2); margin:0 0 var(--s5); padding:0; list-style:none}
+  .steps li{display:flex; gap:var(--s3); align-items:flex-start; padding:var(--s3) var(--s4);
+    background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-md);
+    font-size:var(--fs-sm); line-height:1.45}
+  .steps .n{flex:none; width:24px; height:24px; border-radius:50%; display:grid; place-items:center;
+    background:var(--mark-grad); color:#fff; font-size:12px; font-weight:700}
+  .feat{display:grid; gap:var(--s2); margin:0; padding:0; list-style:none; text-align:left}
+  .feat li{display:flex; gap:var(--s3); align-items:flex-start;
+    color:var(--ink-2); font-size:var(--fs-sm); line-height:1.45}
+  .feat .ic{flex:none; font-size:17px; line-height:1.4}
+  .feat b{color:var(--ink); font-weight:650}
+  .sect{margin:var(--s5) 0 var(--s3); text-align:left; color:var(--ink-3);
+    font-size:var(--fs-xs); font-weight:700; letter-spacing:.08em; text-transform:uppercase}
+  .sect:first-child{margin-top:0}
+  .note{margin-top:var(--s5); padding:var(--s3) var(--s4); text-align:left;
+    background:var(--surface-2); border:1px solid var(--line); border-left:3px solid var(--accent);
+    border-radius:var(--r-sm); color:var(--ink-2); font-size:var(--fs-sm); line-height:1.45}
+  .note b{color:var(--ink); font-weight:650}
+  .codebox{display:flex; gap:var(--s3); justify-content:center; margin:var(--s3) 0}
+  .codebox input{width:200px; padding:13px var(--s4); text-align:center; text-transform:uppercase;
+    font-size:22px; font-weight:700; letter-spacing:.2em; color:var(--ink);
+    background:var(--surface-2); border:1px solid var(--line-2); border-radius:var(--r-md)}
+  .codebox input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 4px var(--brand-ring)}
+  .hint{margin-top:var(--s3); color:var(--ink-3); font-size:var(--fs-xs); line-height:1.5}
+</style>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" data-head-v1>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="author" content="Процюк О. К.">
+<meta name="description" content="Демонстраційна гра без коду: три раунди, оцінка за тією самою шкалою, результат не зберігається.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Навчальні ігри">
+<meta property="og:locale" content="uk_UA">
+<meta property="og:title" content="Демо — як працює сайт навчальних ігор">
+<meta property="og:description" content="Демонстраційна гра без коду: три раунди, оцінка за тією самою шкалою, результат не зберігається.">
+<meta property="og:url" content="https://strykers79.github.io/school-games/demo.html">
+<meta property="og:image" content="https://strykers79.github.io/school-games/og-cover.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="logo"><span class="dot"></span>Навчальні ігри</div>
+    <span class="badge">демо</span>
+    <div class="spacer"></div>
+    <div class="dots" id="dots" aria-hidden="true"></div>
+    <div class="stars">⭐ <b id="stars">0</b></div>
+  </div>
+
+  <div class="card">
+    <div class="head">
+      <div class="bit bit-img" aria-hidden="true" id="mascot"><img src="bit.svg" alt="" width="56" height="56"></div>
+      <div class="bubble" id="say">Привіт! Я робот <b>Біт</b>. Покажу за 3 хвилини, як працює цей сайт.</div>
+    </div>
+    <div class="stage" id="stage"></div>
+    <div class="actions" id="actions"></div>
+  </div>
+
+  <footer>
+    Демонстраційна гра · результат <b>не зберігається</b> й <b>не потрапляє</b> в журнал<br>
+    Справжні ігри відкриваються лише за особистим кодом учня
+  
+    <span class="sig" data-sig>© 2025–2026 Процюк О. К. · вчитель інформатики<br>Комунальний заклад «Харківський ліцей № 47 Харківської міської ради»</span><br><a class="doclink" data-doc href="about.html">Про сайт і дані</a>
+  </footer>
+</div>
+<div class="flash" id="flash" aria-hidden="true">⭐</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const stage=$("stage"), say=$("say"), actions=$("actions"),
+        starsEl=$("stars"), dotsEl=$("dots"), mascot=$("mascot");
+
+  // Біт — намальований svg (той самий файл, що в іграх 5-А), Байт — emoji.
+  // ⚠️ textContent тут не годиться: він стер би <img>.
+  const setMascot = kind => {
+    if(kind === "bit"){
+      mascot.classList.add("bit-img");
+      mascot.innerHTML = '<img src="bit.svg" alt="" width="56" height="56">';
+    } else {
+      mascot.classList.remove("bit-img");
+      mascot.textContent = "\uD83D\uDEF8";
+    }
+  };
+
+  const MAX = 12;               // 4 + 4 + 4
+  const TOTAL_ROUNDS = 3;
+  let stars = 0, round = 0, mistakes = 0;
+
+  // Та сама шкала, що на сервері (pct_to_grade)
+  const SCALE = [[90,12],[82,11],[74,10],[66,9],[58,8],[50,7],[42,6],[34,5],[25,4],[17,3],[8,2]];
+  const pctToGrade = p => { for (const [t,g] of SCALE) if (p >= t) return g; return 1; };
+
+  for (let i=0;i<TOTAL_ROUNDS;i++) dotsEl.appendChild(document.createElement("i"));
+  const paintDots = () => [...dotsEl.children].forEach((d,i)=>{
+    d.className = i < round ? "done" : (i === round ? "on" : "");
+  });
+  const bit = html => { say.innerHTML = html; };
+  const addStar = () => {
+    stars++; starsEl.textContent = stars;
+    const f = $("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
+  };
+  const shuffle = a => { for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+  const setActions = html => { actions.innerHTML = html; };
+
+  // ═════════════════ ЕКРАН 1 — що це таке ═════════════════
+  function screenIntro(){
+    round = 0; paintDots(); dotsEl.style.visibility = "hidden";
+    setMascot("bit");
+    bit("Привіт! Я робот <b>Біт</b>. Покажу за 3 хвилини, як працює цей сайт.");
+    stage.innerHTML = `
+      <div class="intro">
+        <h1>Навчальні ігри з оцінкою 1–12</h1>
+        <p class="lede">Учень відкриває посилання, вводить <b>особистий код</b> — і одразу грає.
+          Без реєстрації, без пароля, з будь-якого пристрою. Оцінку рахує <b>сервер</b>,
+          а вчитель бачить результати у своїй адмін-панелі.</p>
+        <ol class="steps">
+          <li><span class="n">1</span><span>Вчитель створює <b>коди</b> на клас і роздає їх <b>приватно</b> — кожному свій</span></li>
+          <li><span class="n">2</span><span>Учень відкриває головну сторінку й вводить код — сайт сам відкриває <b>потрібну гру</b></span></li>
+          <li><span class="n">3</span><span>Учень проходить кілька раундів; помилка знімає бал, але <b>не завершує</b> гру</span></li>
+          <li><span class="n">4</span><span>На екрані з'являється <b>оцінка 1–12</b>; спроб зазвичай дві, зараховується краща</span></li>
+          <li><span class="n">5</span><span>Вчитель бачить результати в адмінці й переносить бали в <b>Мрію</b></span></li>
+        </ol>
+        <div class="note">Далі — <b>коротка демо-гра</b> з трьох раундів. Це ті самі механіки,
+          що в справжніх іграх, лише зміст простіший і результат нікуди не записується.</div>
+      </div>`;
+    setActions(`<button class="btn" id="go">Спробувати як учень →</button>
+                <button class="btn ghost" id="skip">Одразу можливості</button>`);
+    $("go").onclick = screenLogin;
+    $("skip").onclick = () => screenFeatures(true);
+  }
+
+  // ═════════════════ ЕКРАН 2 — вхід за кодом (імітація) ═════════════════
+  function screenLogin(){
+    bit("Так виглядає вхід. У демо код уже вписано — просто натисни <b>Увійти</b>.");
+    stage.innerHTML = `
+      <p class="task" style="text-align:center">Вхід за кодом</p>
+      <div class="codebox"><input id="code" value="DEMO" maxlength="8" autocomplete="off" inputmode="latin"></div>
+      <p class="hint" style="text-align:center">
+        У справжній грі код видає вчитель — він прив'язує результат до конкретного учня.<br>
+        Код можна вимкнути або видати новий, а кількість спроб задає вчитель.</p>`;
+    setActions(`<button class="btn" id="enter">Увійти →</button>
+                <button class="btn ghost" id="back">Назад</button>`);
+    $("enter").onclick = () => { round = 0; dotsEl.style.visibility = "visible"; paintDots(); rounds[0](); };
+    $("back").onclick = screenIntro;
+    $("code").addEventListener("keydown", e => { if (e.key === "Enter") $("enter").click(); });
+  }
+
+  // ═════════════════ Механіка А — розклади по папках ═════════════════
+  function sortRound(cfg){
+    bit(cfg.hint);
+    let sel = null, left = cfg.items.length;
+    stage.innerHTML = `<p class="task">${cfg.task}</p>
+      <div class="pool" id="pool"></div><div class="targets" id="targets"></div>`;
+    const pool = $("pool"), targets = $("targets");
+    shuffle(cfg.items.slice()).forEach(it => {
+      const b = document.createElement("button"); b.className = "tile";
+      b.innerHTML = `<span class="ic">${it.ic}</span>${it.n}`;
+      b.onclick = () => {
+        if (b.classList.contains("gone")) return;
+        [...pool.children].forEach(x => x.classList.remove("sel"));
+        b.classList.add("sel"); targets.classList.add("armed"); sel = it; sel.el = b;
+        bit(`Обрано: <b>${it.n}</b>. ${cfg.pick}`);
+      };
+      pool.appendChild(b);
+    });
+    const counts = {}; cfg.folders.forEach(f => counts[f.name] = 0);
+    cfg.folders.forEach(f => {
+      const d = document.createElement("div");
+      d.className = "folder"; d.tabIndex = 0; d.setAttribute("role","button");
+      d.innerHTML = `<div class="fic">${f.ic}</div><div class="fname">${f.name}</div><div class="cnt">0</div>`;
+      const act = () => {
+        if (!sel){ bit("Спочатку торкнись <b>картки</b>, потім папки 🙂");
+          d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300); return; }
+        if (sel.f === f.name){
+          sel.el.classList.add("gone"); counts[f.name]++;
+          d.querySelector(".cnt").textContent = counts[f.name];
+          d.classList.add("hit"); setTimeout(()=>d.classList.remove("hit"),300);
+          addStar(); left--; sel = null; targets.classList.remove("armed");
+          if (left === 0){ bit(cfg.win); done(); } else bit("Правильно! 👍");
+        } else {
+          d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300);
+          mistakes++; bit(`Ще подумай: <b>${sel.n}</b> — точно сюди?`);
+        }
+      };
+      d.onclick = act;
+      d.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); act(); } };
+      targets.appendChild(d);
+    });
+    lockNext();
+  }
+
+  // ═════════════════ Механіка Б — познач правильні ═════════════════
+  function pickRound(cfg){
+    bit(cfg.hint);
+    let found = 0; const total = cfg.items.filter(x => x.ok).length;
+    stage.innerHTML = `<p class="task">${cfg.task}</p><div class="pool" id="pool"></div>`;
+    const pool = $("pool");
+    shuffle(cfg.items.slice()).forEach(it => {
+      const b = document.createElement("button"); b.className = "tile"; b.style.minWidth = "170px";
+      b.innerHTML = `<span class="pbox" aria-hidden="true">\u2713</span>${it.n}`;
+      b.onclick = () => {
+        if (b.dataset.done) return;
+        if (it.ok){
+          b.classList.add("ok"); b.dataset.done = 1; addStar(); found++;
+          bit("Так, правильно ✅");
+          if (found === total){ bit(cfg.win); done(); }
+        } else {
+          const bx=b.querySelector(".pbox"); b.classList.add("err");
+          if(bx) bx.textContent="\u2715";
+          setTimeout(()=>{ b.classList.remove("err"); if(bx) bx.textContent="\u2713"; },900);
+          mistakes++; bit(`Ні — <b>${it.n}</b>: ${it.s}.`);
+        }
+      };
+      pool.appendChild(b);
+    });
+    lockNext();
+  }
+
+  // ═════════════════ Механіка В — розстав по порядку ═════════════════
+  function orderRound(cfg){
+    bit(cfg.hint);
+    let step = 0;
+    stage.innerHTML = `<p class="task">${cfg.task}</p><div class="pool" id="pool"></div>`;
+    const pool = $("pool");
+    shuffle(cfg.steps.slice()).forEach(it => {
+      const b = document.createElement("button"); b.className = "tile"; b.style.minWidth = "150px";
+      b.innerHTML = `<span class="ic">${it.ic}</span>${it.n}`;
+      b.onclick = () => {
+        if (b.dataset.done) return;
+        if (it.i === step){
+          step++; b.dataset.done = 1; b.classList.add("ok");
+          b.insertAdjacentHTML("afterbegin", `<span class="num">${step}</span>`);
+          addStar();
+          if (step === cfg.steps.length){ bit(cfg.win); done(); }
+          else bit(`Так! Крок ${step} правильний. Що далі?`);
+        } else {
+          b.classList.add("err"); setTimeout(()=>b.classList.remove("err"),400);
+          mistakes++; bit(`Ні, це не крок ${step+1}. Що йде <b>раніше</b>?`);
+        }
+      };
+      pool.appendChild(b);
+    });
+    lockNext();
+  }
+
+  // ═════════════════ Раунди демо ═════════════════
+  function round1(){
+    setMascot("bit");
+    sortRound({
+      task: "Цифровий пристрій чи ні? 🔢",
+      hint: "Механіка перша: <b>розкласти по папках</b>. Спершу картка, потім папка.",
+      pick: "Він кодує дані цифрами?",
+      win: "Готово! Це була механіка «розкласти по папках» ✨",
+      folders: [{name:"Цифровий", ic:"🔢"}, {name:"Нецифровий", ic:"🔧"}],
+      items: [
+        {n:"Смартфон", ic:"📱", f:"Цифровий"},
+        {n:"Роутер", ic:"📡", f:"Цифровий"},
+        {n:"Рулетка", ic:"📏", f:"Нецифровий"},
+        {n:"Ртутний термометр", ic:"🌡️", f:"Нецифровий"}
+      ]
+    });
+  }
+
+  function round2(){
+    setMascot("bait");
+    pickRound({
+      task: "Що робить пароль надійним? 🔐",
+      hint: "Механіка друга: <b>познач правильні</b>. Тепер веду я — дрон <b>Байт</b> (у кожного класу свій персонаж).",
+      win: "Чудово! Це була механіка «познач правильні» 🎯",
+      items: [
+        {n:"Довгий — від 12 знаків", ok:true},
+        {n:"Літери, цифри й знаки разом", ok:true},
+        {n:"Різний для різних сайтів", ok:true},
+        {n:"Його не знає ніхто, крім тебе", ok:true},
+        {n:"Дата народження", ok:false, s:"її легко дізнатися"},
+        {n:"123456", ok:false, s:"це перший пароль, який перебирають"},
+        {n:"Один пароль на всі сайти", ok:false, s:"зламають один — відкриють усі"}
+      ]
+    });
+  }
+
+  function round3(){
+    setMascot("bait");
+    orderRound({
+      task: "Розстав одиниці від найменшої до найбільшої 1 → 4",
+      hint: "Механіка третя: <b>розставити по порядку</b>. Натискай від найменшої одиниці.",
+      win: "Точно! Це була механіка «по порядку» 🏁",
+      steps: [
+        {i:0, n:"біт", ic:"•"},
+        {i:1, n:"байт", ic:"▪"},
+        {i:2, n:"кілобайт", ic:"◼"},
+        {i:3, n:"мегабайт", ic:"⬛"}
+      ]
+    });
+  }
+
+  // ═════════════════ Фінал — оцінка ═════════════════
+  function finale(){
+    dotsEl.querySelectorAll("i").forEach(d => d.className = "done");
+    const earned = Math.max(0, MAX - mistakes);
+    const pct = Math.round(100 * earned / MAX);
+    const grade = pctToGrade(pct);
+    setMascot("bait");
+    bit("Готово! Ось що учень бачить у кінці гри 🎉");
+    stage.innerHTML = `
+      <div class="win">
+        <div class="big">🏆</div>
+        <h2>Гру пройдено!</h2>
+        <div class="score">⭐ ${earned} / ${MAX} · помилок: ${mistakes}</div>
+        <div class="score" style="color:var(--ok)">Оцінка: ${grade} / 12</div>
+        <p>Це <b>та сама шкала</b>, що в реальних іграх, тому бали різних ігор порівнянні.</p>
+        <div class="note"><b>У справжній грі</b> цей бал рахує <b>сервер</b>, а не браузер: результат
+          прив'язується до учня за кодом, зберігається разом із номером спроби — і його не можна
+          «підправити» у вкладці розробника. <b>У демо нічого не збереглося.</b></div>
+      </div>`;
+    setActions(`<button class="btn" id="feat">Що вміє сайт →</button>
+                <button class="btn ghost" id="again">Пройти ще раз ↺</button>`);
+    $("feat").onclick = () => screenFeatures(false);
+    $("again").onclick = () => { stars = 0; mistakes = 0; round = 0; starsEl.textContent = 0; paintDots(); rounds[0](); };
+  }
+
+  // ═════════════════ ЕКРАН — можливості ═════════════════
+  function screenFeatures(fromIntro){
+    dotsEl.style.visibility = "hidden";
+    setMascot("bit");
+    bit("А тепер — коротко про те, <b>що вміє сайт</b>.");
+    stage.innerHTML = `
+      <div class="intro">
+        <div class="sect">Для учня</div>
+        <ul class="feat">
+          <li><span class="ic">🔑</span><span><b>Вхід за особистим кодом</b> — без реєстрації, без пароля, без email</span></li>
+          <li><span class="ic">📱</span><span><b>Будь-який пристрій</b> — телефон, планшет, ноутбук; нічого встановлювати не треба</span></li>
+          <li><span class="ic">🌗</span><span><b>Світла й темна тема</b>, великі кнопки, керування з клавіатури</span></li>
+          <li><span class="ic">💪</span><span><b>Помилка не завершує гру</b> — вона лише знімає один бал, тому не страшно спробувати</span></li>
+          <li><span class="ic">🔁</span><span><b>Дві спроби</b> (кількість задає вчитель) — зараховується <b>краща</b></span></li>
+        </ul>
+
+        <div class="sect">Для вчителя</div>
+        <ul class="feat">
+          <li><span class="ic">🧮</span><span><b>Оцінку 1–12 рахує сервер</b> за єдиною шкалою — бали різних ігор порівнянні</span></li>
+          <li><span class="ic">🗂️</span><span><b>Адмін-панель:</b> список учнів, генерація кодів на клас, усі результати зі спробами</span></li>
+          <li><span class="ic">📄</span><span><b>Найкраща спроба</b> кожного учня — готова до перенесення в <b>Мрію</b></span></li>
+          <li><span class="ic">🎯</span><span><b>Ігри під програму</b> — кожна закриває конкретні групи результатів (ГР) із КТП</span></li>
+          <li><span class="ic">🤖</span><span><b>Свій персонаж на клас</b> — робот Біт у 5-му, дрон Байт у 6-му</span></li>
+          <li><span class="ic">🧩</span><span><b>Рушій перевикористовується:</b> нова гра — це новий зміст, а не новий код</span></li>
+        </ul>
+
+        <div class="sect">Приватність і надійність</div>
+        <ul class="feat">
+          <li><span class="ic">🔒</span><span><b>У публічному репозиторії немає списків дітей</b> — імена та класи лише в базі вчителя</span></li>
+          <li><span class="ic">👤</span><span><b>Вчитель бачить лише свої дані</b> — це забезпечує база, а не сторінка</span></li>
+          <li><span class="ic">📉</span><span><b>Мінімум даних:</b> ім'я, клас, гра, бал, спроба, час — і нічого зайвого</span></li>
+          <li><span class="ic">📵</span><span><b>Коди роздаються приватно</b>; код можна вимкнути й видати новий</span></li>
+        </ul>
+
+        <div class="note">Чесно про межі: логіка раундів працює у браузері учня, тож це оцінка
+          <b>«за активність і результат»</b>, а не олімпіадна контрольна. На сервері захищено те, що
+          важливо: <b>сам бал</b>, <b>ліміт спроб</b> і <b>привʼязка результату до учня</b>.</div>
+      </div>`;
+    setActions(fromIntro
+      ? `<button class="btn" id="play">Спробувати гру →</button><button class="btn ghost" id="home">На початок</button>`
+      : `<button class="btn ghost" id="home">На початок</button>`);
+    const play = $("play"); if (play) play.onclick = screenLogin;
+    $("home").onclick = () => { stars = 0; mistakes = 0; starsEl.textContent = 0; screenIntro(); };
+  }
+
+  // ═════════════════ Керування раундами ═════════════════
+  const rounds = [round1, round2, round3];
+  function lockNext(){ setActions(`<button class="btn" id="next" disabled>Виконуй завдання…</button>`); }
+  function done(){
+    const last = round >= TOTAL_ROUNDS - 1;
+    setActions(`<button class="btn" id="next">${last ? "Оцінка 🏁" : "Далі →"}</button>`);
+    $("next").onclick = () => {
+      round++;
+      if (round >= TOTAL_ROUNDS){ finale(); return; }
+      paintDots(); rounds[round]();
+    };
+  }
+
+  screenIntro();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Адмінка — ігри</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/theme.js"></script>
+<style>
+  /* тільки те, що є лише в адмінці */
+  body{padding:var(--s5) var(--s4) var(--s7)}
+  .wrap{max-width:940px; margin:0 auto}
+  /* ⚠️ кнопку теми theme.js ставить у правий кут екрана (шапки .top тут немає).
+     Поки вікно ширше за .wrap, вона висить у вільному полі. Щойно вужче —
+     впритул до кнопки «Вийти», тому віддаємо їй власну смугу зверху. */
+  @media (max-width:980px){ body{padding-top:calc(var(--s5) + 40px)} }
+  h1{font-size:var(--fs-h2)}
+  .row{display:flex; gap:var(--s2); align-items:center; flex-wrap:wrap}
+  .between{justify-content:space-between}
+  .stack{display:flex; flex-direction:column; gap:var(--s2)}
+  .muted{color:var(--ink-3); font-size:var(--fs-sm)}
+
+  .card{padding:var(--s4); margin-bottom:var(--s4)}
+  .login{max-width:380px; margin:8vh auto}
+  .login .card>*{width:100%; margin-bottom:var(--s2)}
+
+  input,select,textarea{padding:9px 11px; border:1px solid var(--line-2); border-radius:var(--r-sm);
+    background:var(--surface-2); color:var(--ink); font-size:var(--fs-sm)}
+  input:focus,select:focus,textarea:focus{outline:none; border-color:var(--brand);
+    box-shadow:0 0 0 3px var(--brand-ring)}
+
+  /* кнопки нижчі за ігрові: в адмінці їх багато поруч */
+  .btn{min-height:38px; padding:0 var(--s4); font-size:var(--fs-sm); border-radius:var(--r-sm)}
+  .btn.sm{min-height:30px; padding:0 var(--s3); font-size:var(--fs-xs)}
+  .btn.danger{background:transparent; color:var(--bad); border-color:var(--line-2); box-shadow:none}
+  .btn.danger:hover{filter:none; background:var(--bad-soft); border-color:var(--bad)}
+
+  table{border-collapse:collapse; width:100%; font-size:var(--fs-sm)}
+  th,td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line)}
+  th{color:var(--ink-3); font-size:var(--fs-xs); font-weight:700;
+    letter-spacing:.06em; text-transform:uppercase}
+  tbody tr:hover{background:var(--surface-2)}
+
+  .tabs{display:flex; gap:var(--s1); margin:var(--s4) 0; flex-wrap:wrap}
+  .tab{cursor:pointer; border:0; background:transparent; color:var(--ink-2);
+    font-size:var(--fs-sm); font-weight:650; padding:8px 14px; border-radius:var(--r-full);
+    transition:background .15s, color .15s}
+  .tab:hover{background:var(--surface-2); color:var(--ink)}
+  .tab.on{background:var(--btn-grad); color:#fff; box-shadow:var(--sh1)}
+  .tab:focus-visible{outline:2px solid var(--brand); outline-offset:1px}
+  .panel{display:none} .panel.on{display:block}
+
+  .msg{display:none; padding:10px 12px; margin:var(--s3) 0;
+    border-radius:var(--r-sm); font-size:var(--fs-sm)}
+  .msg.err{display:block; background:var(--bad-soft); color:var(--bad); border:1px solid var(--bad-line)}
+  .msg.ok{display:block; background:var(--ok-soft); color:var(--ok); border:1px solid var(--ok-line)}
+
+  .code{font-family:var(--mono); font-weight:700; letter-spacing:1px; color:var(--accent);
+    background:var(--accent-soft); border:1px solid color-mix(in srgb,var(--accent) 24%,transparent);
+    padding:2px 8px; border-radius:6px}
+  .checks{max-height:280px; overflow:auto; padding:var(--s2);
+    border:1px solid var(--line); border-radius:var(--r-sm); background:var(--surface-2)}
+  .checks label{display:flex; gap:var(--s2); align-items:center; padding:4px 6px; font-size:var(--fs-sm)}
+  small.hint{color:var(--ink-3)}
+</style>
+</head>
+<body>
+  <!-- ЛОГІН -->
+  <div id="loginView" class="login" style="display:none">
+    <h1 style="text-align:center;margin-bottom:14px">Адмінка ігор</h1>
+    <div class="card stack">
+      <input id="email" type="email" placeholder="Email" autocomplete="username">
+      <input id="password" type="password" placeholder="Пароль" autocomplete="current-password">
+      <button class="btn" id="loginBtn">Увійти</button>
+      <div id="loginMsg" class="msg"></div>
+    </div>
+  </div>
+
+  <!-- ПАНЕЛЬ -->
+  <div id="appView" class="wrap" style="display:none">
+    <div class="row between">
+      <h1>Адмінка ігор</h1>
+      <div class="row"><span class="muted" id="whoami"></span><button class="btn ghost sm" id="logout">Вийти</button></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab on" data-tab="students">Учні</button>
+      <button class="tab" data-tab="codes">Коди</button>
+      <button class="tab" data-tab="results">Результати</button>
+    </div>
+
+    <!-- УЧНІ -->
+    <div class="panel on" id="tab-students">
+      <div class="card">
+        <b>Додати учнів</b>
+        <p class="muted" style="margin:6px 0 10px">Клас + список ПІБ (кожен з нового рядка).</p>
+        <div class="row">
+          <input id="stClass" placeholder="Клас (напр. 5-А)" style="width:150px">
+        </div>
+        <textarea id="stNames" rows="4" placeholder="Олег Петренко&#10;Марія Іваненко&#10;..." style="width:100%;margin-top:8px;font-family:inherit;font-size:15px;padding:10px;border:1px solid var(--line);border-radius:10px"></textarea>
+        <div class="row" style="margin-top:8px"><button class="btn" id="addStudents">Додати</button></div>
+        <div id="stMsg" class="msg"></div>
+      </div>
+      <div class="card">
+        <div class="row between"><b>Список учнів</b><span class="muted" id="stCount"></span></div>
+        <table style="margin-top:8px"><thead><tr><th>Клас</th><th>ПІБ</th><th></th></tr></thead><tbody id="stBody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- КОДИ -->
+    <div class="panel" id="tab-codes">
+      <div class="card">
+        <b>Згенерувати коди</b>
+        <div class="row" style="margin:10px 0">
+          <select id="cGame"></select>
+          <select id="cClass"></select>
+          <label class="row" style="gap:6px">Спроб: <input id="cAttempts" type="number" min="1" max="5" value="2" style="width:64px"></label>
+          <button class="btn" id="genCodes">Згенерувати для обраних</button>
+        </div>
+        <div id="cChecks" class="checks"></div>
+        <div id="cMsg" class="msg"></div>
+        <div id="genResult"></div>
+      </div>
+      <div class="card">
+        <div class="row between"><b>Наявні коди</b><span class="muted" id="codesCount"></span></div>
+        <table style="margin-top:8px"><thead><tr><th>Код</th><th>Клас</th><th>ПІБ</th><th>Гра</th><th>Спроб</th></tr></thead><tbody id="codesBody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- РЕЗУЛЬТАТИ -->
+    <div class="panel" id="tab-results">
+      <div class="card">
+        <div class="row between">
+          <b>Найкращі результати</b>
+          <button class="btn ghost sm" id="exportCsv">Експорт CSV</button>
+        </div>
+        <table style="margin-top:8px"><thead><tr><th>Клас</th><th>ПІБ</th><th>Гра</th><th>Кращий бал</th><th>%</th><th>Спроб</th></tr></thead><tbody id="resBody"></tbody></table>
+        <div id="resMsg" class="msg"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="supabase-config.js"></script>
+<script src="assets/vendor/supabase-js-2.112.0.umd.js"></script>
+<script>
+// ⚠️ Локальна збірка supabase-js (assets/vendor/) — не з CDN.
+// Адмінці потрібні auth і from(), тому бібліотека тут лишається,
+// але вже своя й із зафіксованою версією.
+const sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+const $ = s => document.querySelector(s);
+const el = (id) => document.getElementById(id);
+function show(id){ ['loginView','appView'].forEach(v=>el(v).style.display = v===id?'block':'none'); }
+function msg(id, text, kind){ const m=el(id); m.className='msg '+(kind||''); m.textContent=text||''; if(!text) m.className='msg'; }
+const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let students=[], games=[];
+
+// ── авторизація ──
+async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session){ await enterApp(session); } else { show('loginView'); }
+}
+el('loginBtn').onclick = async () => {
+  const email = el('email').value.trim(), password = el('password').value;
+  msg('loginMsg','Входимо…');
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ msg('loginMsg', error.message, 'err'); return; }
+  await enterApp(data.session);
+};
+el('logout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+async function enterApp(session){
+  el('whoami').textContent = session.user.email;
+  show('appView');
+  await loadGames(); await loadStudents(); await loadCodes(); await loadResults();
+}
+
+// ── таби ──
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on', x===t));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on', p.id==='tab-'+t.dataset.tab));
+});
+
+// ── дані ──
+async function loadGames(){
+  const { data, error } = await sb.from('games').select('slug,title').eq('active',true).order('title');
+  games = data||[];
+  el('cGame').innerHTML = games.map(g=>`<option value="${esc(g.slug)}">${esc(g.title)}</option>`).join('');
+}
+async function loadStudents(){
+  const { data, error } = await sb.from('students').select('id,full_name,class_label').order('class_label').order('full_name');
+  if(error){ msg('stMsg', error.message, 'err'); return; }
+  students = data||[];
+  el('stCount').textContent = students.length+' учнів';
+  el('stBody').innerHTML = students.map(s=>`<tr><td>${esc(s.class_label)}</td><td>${esc(s.full_name)}</td>
+    <td style="text-align:right"><button class="btn danger sm" data-del="${s.id}">видалити</button></td></tr>`).join('');
+  el('stBody').querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
+    const id = b.dataset.del;
+    const st = students.find(s=>s.id===id);
+    const who = st ? `${st.full_name} (${st.class_label})` : 'учня';
+
+    // скільки кодів і результатів привʼязано — попереджаємо ДО видалення
+    const { count:nCodes } = await sb.from('codes')
+      .select('id', { count:'exact', head:true }).eq('student_id', id);
+    const { count:nRes } = await sb.from('results')
+      .select('id', { count:'exact', head:true }).eq('student_id', id);
+
+    let warn = `Видалити ${who}?`;
+    if(nCodes) warn += `\n\nРазом з учнем буде видалено кодів: ${nCodes}.`;
+    if(nRes)   warn += `\n\nРезультати (${nRes}) НЕ видаляються — залишаться в історії, але вже без ПІБ.`;
+    if(!confirm(warn)) return;
+
+    // 1) знімаємо привʼязку до кодів (у БД є on delete cascade, але робимо явно —
+    //    щоб працювало і в базі, де констрейнт створювався ще без cascade)
+    const { error:cErr } = await sb.from('codes').delete().eq('student_id', id);
+    if(cErr){ alert('Не вдалося видалити коди учня:\n'+cErr.message); return; }
+
+    // 2) тепер самого учня
+    const { error } = await sb.from('students').delete().eq('id', id);
+    if(error){ alert(error.message); return; }
+
+    // 3) ⚠️ ОБОВʼЯЗКОВО перемалювати і таблицю кодів, і результати —
+    //    інакше на екрані лишаються рядки вже видалених кодів
+    await loadStudents(); await loadCodes(); await loadResults();
+  });
+  fillClassFilters();
+}
+function classesList(){ return [...new Set(students.map(s=>s.class_label))].sort(); }
+function fillClassFilters(){
+  const cls = classesList();
+  el('cClass').innerHTML = cls.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('') || '<option value="">— немає учнів —</option>';
+  renderChecks();
+}
+el('cClass').onchange = renderChecks;
+function renderChecks(){
+  const c = el('cClass').value;
+  const list = students.filter(s=>s.class_label===c);
+  el('cChecks').innerHTML = list.length
+    ? `<label style="font-weight:700"><input type="checkbox" id="checkAll" checked> Обрати всіх</label>` +
+      list.map(s=>`<label><input type="checkbox" class="stChk" value="${s.id}" checked> ${esc(s.full_name)}</label>`).join('')
+    : '<span class="muted">У цьому класі ще немає учнів.</span>';
+  const all = el('checkAll');
+  if(all) all.onchange = ()=> el('cChecks').querySelectorAll('.stChk').forEach(ch=>ch.checked=all.checked);
+}
+
+// ── додати учнів ──
+el('addStudents').onclick = async () => {
+  const cls = el('stClass').value.trim();
+  const names = el('stNames').value.split('\n').map(x=>x.trim()).filter(Boolean);
+  if(!cls || !names.length){ msg('stMsg','Впиши клас і хоча б одне ПІБ.','err'); return; }
+  const rows = names.map(n=>({ full_name:n, class_label:cls }));
+  const { error } = await sb.from('students').insert(rows);
+  if(error){ msg('stMsg', error.message, 'err'); return; }
+  el('stNames').value=''; msg('stMsg', `Додано: ${rows.length}`, 'ok');
+  await loadStudents();
+};
+
+// ── коди ──
+async function loadCodes(){
+  const { data, error } = await sb.from('codes')
+    .select('code,max_attempts,students(full_name,class_label),games(title)')
+    .order('created_at',{ascending:false});
+  if(error){ el('codesBody').innerHTML=''; return; }
+  el('codesCount').textContent = (data?.length||0)+' кодів';
+  el('codesBody').innerHTML = (data||[]).map(c=>`<tr>
+    <td><span class="code">${esc(c.code)}</span></td>
+    <td>${esc(c.students?.class_label)}</td><td>${esc(c.students?.full_name)}</td>
+    <td>${esc(c.games?.title)}</td><td>${c.max_attempts}</td></tr>`).join('');
+}
+el('genCodes').onclick = async () => {
+  const gameSlug = el('cGame').value;
+  const ids = [...el('cChecks').querySelectorAll('.stChk:checked')].map(ch=>ch.value);
+  const att = parseInt(el('cAttempts').value,10)||2;
+  if(!gameSlug || !ids.length){ msg('cMsg','Обери гру і хоча б одного учня.','err'); return; }
+  msg('cMsg','Генеруємо…');
+  const { data, error } = await sb.rpc('admin_create_codes', { p_game_slug:gameSlug, p_student_ids:ids, p_max_attempts:att });
+  if(error){ msg('cMsg', error.message, 'err'); return; }
+  msg('cMsg', `Згенеровано кодів: ${data.length}`, 'ok');
+  el('genResult').innerHTML = '<table style="margin-top:10px"><thead><tr><th>ПІБ</th><th>Код</th></tr></thead><tbody>'+
+    data.map(r=>`<tr><td>${esc(r.r_name)}</td><td><span class="code">${esc(r.r_code)}</span></td></tr>`).join('')+'</tbody></table>';
+  await loadCodes();
+};
+
+// ── результати ──
+let summaryRows=[];
+async function loadResults(){
+  const { data, error } = await sb.from('results')
+    .select('grade,pct,students(full_name,class_label),games(title)')
+    .order('created_at',{ascending:false});
+  if(error){ msg('resMsg', error.message, 'err'); return; }
+  const map = {};
+  (data||[]).forEach(r=>{
+    const cls=r.students?.class_label||'', pib=r.students?.full_name||'', game=r.games?.title||'';
+    const k=cls+'|'+pib+'|'+game;
+    if(!map[k]) map[k]={cls,pib,game,grade:r.grade||0,pct:r.pct||0,n:1};
+    else{ map[k].n++; if((r.grade||0)>map[k].grade){map[k].grade=r.grade;map[k].pct=r.pct;} }
+  });
+  summaryRows = Object.values(map).sort((a,b)=>(a.cls+a.game+a.pib).localeCompare(b.cls+b.game+b.pib));
+  el('resBody').innerHTML = summaryRows.length
+    ? summaryRows.map(r=>`<tr><td>${esc(r.cls)}</td><td>${esc(r.pib)}</td><td>${esc(r.game)}</td>
+        <td><b>${r.grade}</b></td><td>${r.pct}%</td><td>${r.n}</td></tr>`).join('')
+    : '<tr><td colspan="6" class="muted">Поки що немає результатів.</td></tr>';
+}
+el('exportCsv').onclick = () => {
+  const head = ['Клас','ПІБ','Гра','Бал','Відсоток','Спроб'];
+  const lines = [head.join(';')].concat(summaryRows.map(r=>[r.cls,r.pib,r.game,r.grade,r.pct,r.n].join(';')));
+  const blob = new Blob(['﻿'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='rezultaty.csv'; a.click();
+};
+
+init();
+</script>
+</body>
+</html>

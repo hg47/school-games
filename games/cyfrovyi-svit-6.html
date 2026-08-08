@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Цифровий світ — гра для 6 класу</title>
+<meta name="description" content="Підсумкова робота ГР 1 та ГР 4: цифрові пристрої, класифікація, етапи створення презентації, цифровий слід і безпека. Для 6 класу.">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/game.css">
+<script src="../assets/theme.js"></script>
+<script src="../supabase-config.js"></script>
+<script src="../assets/db.js"></script>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml" data-head-v1>
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="logo"><span class="dot"></span>Цифровий світ</div>
+    <div class="spacer"></div>
+    <div class="dots" id="dots" aria-hidden="true"></div>
+    <div class="stars">⭐ <b id="stars">0</b></div>
+  </div>
+
+  <div class="card">
+    <div class="head">
+      <div class="bit" aria-hidden="true">🛸</div>
+      <div class="bubble" id="say">Привіт! Я дрон <b>Байт</b>. Перевіримо, як ти орієнтуєшся у цифровому світі?</div>
+    </div>
+    <div class="stage" id="stage"></div>
+    <div class="actions" style="padding:0 18px 22px">
+      <button class="btn" id="next">Почати →</button>
+    </div>
+  </div>
+
+  <footer>Підсумкова робота ГР 1 та ГР 4 · «Цифровий світ» · 6 клас<br><span class="sig" data-sig>© 2025–2026 Процюк О. К. · вчитель інформатики · Харківський ліцей № 47</span><br><a class="doclink" data-doc href="../about.html">Про сайт і дані</a></footer>
+</div>
+<div class="flash" id="flash" aria-hidden="true">⭐</div>
+
+<script>
+(() => {
+  "use strict";
+  const PLAY = (()=>{ try{ return JSON.parse(sessionStorage.getItem('play')||'null'); }catch(e){ return null; } })();
+  if(!PLAY || PLAY.game_slug !== 'cyfrovyi-svit-6'){ location.replace('../index.html'); return; }
+  (function(){ var s0=document.getElementById('say'); if(s0) s0.innerHTML='Привіт, <b>'+(PLAY.student_name||'друже')+'</b>! Я дрон Байт. Це підсумкова гра з тем «Цифрові пристрої» та «Презентації». Спроб лишилось: <b>'+(PLAY.remaining!=null?PLAY.remaining:'?')+'</b>.'; })();
+  const $ = id => document.getElementById(id);
+  const stage=$("stage"), say=$("say"), nextBtn=$("next"), starsEl=$("stars"), dotsEl=$("dots");
+  let stars=0, round=0, mistakes=0;
+  const TOTAL_ROUNDS=5;
+  const MAX=25; // 6 + 6 + 4 + 5 + 4
+
+  for(let i=0;i<TOTAL_ROUNDS;i++){const d=document.createElement("i"); dotsEl.appendChild(d);}
+  const paintDots=()=>{[...dotsEl.children].forEach((d,i)=>{d.className = i<round?"done":(i===round?"on":"");});};
+
+  const addStar = (n=1) => {
+    stars+=n; starsEl.textContent=stars;
+    const f=$("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
+  };
+  const bit = html => { say.innerHTML=html; };
+  const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
+
+  // ── Універсальний раунд «розклади по папках» ──
+  function sortRound(cfg){
+    bit(cfg.hint);
+    let sel=null, left=cfg.items.length;
+    stage.innerHTML=`<p class="task">${cfg.task}</p>
+      <div class="pool" id="pool"></div>
+      <div class="targets" id="targets"></div>`;
+    const pool=$("pool"), targets=$("targets");
+    shuffle(cfg.items.slice()).forEach(it=>{
+      const b=document.createElement("button"); b.className="tile";
+      b.innerHTML=`<span class="ic">${it.ic}</span>${it.n}`;
+      b.onclick=()=>{ if(b.classList.contains("gone"))return;
+        [...pool.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); targets.classList.add("armed");
+        sel=it; sel.el=b;
+        bit(`Обрано: <b>${it.n}</b>. ${cfg.pick}`); };
+      pool.appendChild(b);
+    });
+    const counts={}; cfg.folders.forEach(f=>counts[f.name]=0);
+    cfg.folders.forEach(f=>{
+      const d=document.createElement("div"); d.className="folder"; d.tabIndex=0; d.setAttribute("role","button");
+      d.innerHTML=`<div class="fic">${f.ic}</div><div class="fname">${f.name}</div><div class="cnt">0</div>`;
+      const act=()=>{
+        if(!sel){ bit("Спочатку торкнись <b>картки</b>, потім папки 🙂"); d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300); return; }
+        if(sel.f===f.name){
+          sel.el.classList.add("gone"); counts[f.name]++; d.querySelector(".cnt").textContent=counts[f.name];
+          d.classList.add("hit"); setTimeout(()=>d.classList.remove("hit"),300);
+          addStar(); left--; sel=null; targets.classList.remove("armed");
+          if(left===0){ bit(cfg.win); done(); } else bit("Правильно! 👍 Далі?");
+        } else {
+          d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300);
+          mistakes++; bit(`Подумай ще: <b>${sel.n}</b> — точно сюди?`);
+        }
+      };
+      d.onclick=act; d.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();act();}};
+      targets.appendChild(d);
+    });
+    lockNext();
+  }
+
+  // ── Універсальний раунд «познач правильні» ──
+  function pickRound(cfg){
+    bit(cfg.hint);
+    let found=0; const total=cfg.items.filter(x=>x.ok).length;
+    stage.innerHTML=`<p class="task">${cfg.task}</p><div class="pool" id="pool"></div>`;
+    const pool=$("pool");
+    shuffle(cfg.items.slice()).forEach(it=>{
+      const b=document.createElement("button"); b.className="tile"; b.style.minWidth="160px";
+      // ⚠️ Іконка НЕ показує правильність: у всіх плиток однаковий порожній
+      //    квадратик. Галочка з'являється лише після правильного вибору.
+      //    it.ic у даних лишено, але свідомо НЕ рендериться — інакше
+      //    учень набирав би повний бал, клікаючи по ✅ й не читаючи тексту.
+      b.innerHTML=`<span class="pbox" aria-hidden="true">\u2713</span>${it.n}`;
+      b.onclick=()=>{
+        if(b.dataset.done)return;
+        if(it.ok){ b.classList.add("ok"); b.dataset.done=1; addStar(); found++;
+          bit("Так, правильно ✅"); if(found===total){ bit(cfg.win); done(); } }
+        else { const bx=b.querySelector(".pbox"); b.classList.add("err");
+          if(bx) bx.textContent="\u2715";
+          setTimeout(()=>{ b.classList.remove("err"); if(bx) bx.textContent="\u2713"; },900);
+          mistakes++; bit(`Ні — <b>${it.n}</b>: ${it.s}.`); }
+      };
+      pool.appendChild(b);
+    });
+    lockNext();
+  }
+
+  // ── Раунд «розстав по порядку» ──
+  function orderRound(cfg){
+    bit(cfg.hint);
+    let step=0;
+    stage.innerHTML=`<p class="task">${cfg.task}</p><div class="pool" id="pool"></div>`;
+    const pool=$("pool");
+    shuffle(cfg.steps.slice()).forEach(it=>{
+      const b=document.createElement("button"); b.className="tile"; b.style.minWidth="200px";
+      b.innerHTML=`<span class="ic">${it.ic}</span>${it.n}`;
+      b.onclick=()=>{
+        if(b.dataset.done)return;
+        if(it.i===step){
+          step++; b.dataset.done=1; b.classList.add("ok");
+          b.insertAdjacentHTML("afterbegin",`<span class="num">${step}</span>`);
+          addStar();
+          if(step===cfg.steps.length){ bit(cfg.win); done(); }
+          else bit(`Так! Крок ${step} правильний. Що далі?`);
+        } else {
+          b.classList.add("err"); setTimeout(()=>b.classList.remove("err"),400);
+          mistakes++; bit(`Ні, це не крок ${step+1}. Подумай, що робимо <b>раніше</b>.`);
+        }
+      };
+      pool.appendChild(b);
+    });
+    lockNext();
+  }
+
+  // ═══════════ РАУНД 1 — Цифрове чи нецифрове (ГР 1) ═══════════
+  function round1(){
+    sortRound({
+      task:"Цифровий пристрій чи ні? 🔢",
+      hint:"Цифровий пристрій кодує дані <b>цифрами</b>. Спершу торкнись картки, потім — папки.",
+      pick:"Він цифровий?",
+      win:"Чудово! Ти відрізняєш цифрові пристрої ✨",
+      folders:[{name:"Цифровий",ic:"🔢"},{name:"Нецифровий",ic:"🔧"}],
+      items:[
+        {n:"Роутер",ic:"📶",f:"Цифровий"},
+        {n:"Цифровий термометр",ic:"🌡️",f:"Цифровий"},
+        {n:"SMART-годинник",ic:"⌚",f:"Цифровий"},
+        {n:"Ртутний термометр",ic:"🧪",f:"Нецифровий"},
+        {n:"Рулетка",ic:"📏",f:"Нецифровий"},
+        {n:"Механічний годинник",ic:"🕰️",f:"Нецифровий"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 2 — Групи за основним процесом (ГР 1) ═══════════
+  function round2(){
+    sortRound({
+      task:"До якої групи належить пристрій? 📦",
+      hint:"Дивись на <b>основне</b> призначення: передавання, опрацювання чи зберігання даних.",
+      pick:"Який процес для нього основний?",
+      win:"Ти вмієш класифікувати пристрої! 🎯",
+      folders:[{name:"Передавання",ic:"📡"},{name:"Опрацювання",ic:"⚙️"},{name:"Зберігання",ic:"💾"}],
+      items:[
+        {n:"Модем",ic:"📶",f:"Передавання"},
+        {n:"Роутер",ic:"📡",f:"Передавання"},
+        {n:"Сканер",ic:"🖨️",f:"Опрацювання"},
+        {n:"Цифрова фотокамера",ic:"📷",f:"Опрацювання"},
+        {n:"Флешкарта",ic:"💳",f:"Зберігання"},
+        {n:"SSD-диск",ic:"💾",f:"Зберігання"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 3 — Етапи створення презентації (ГР 1) ═══════════
+  function round3(){
+    orderRound({
+      task:"Розстав етапи створення презентації по порядку 1 → 4",
+      hint:"Натискай етапи <b>в правильному порядку</b>: що робимо найпершим?",
+      win:"Так! Редактор — найостанніший етап 🏁",
+      steps:[
+        {i:0,n:"Визначення мети презентації",ic:"🎯"},
+        {i:1,n:"Пошук і відбір матеріалів",ic:"🔍"},
+        {i:2,n:"Визначення структури",ic:"🗂️"},
+        {i:3,n:"Створення в редакторі",ic:"💻"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 4 — Пасивний чи активний слід (ГР 4) ═══════════
+  function round4(){
+    sortRound({
+      task:"Цифровий слід: пасивний чи активний? 👣",
+      hint:"<b>Пасивний</b> збирається сам, <b>активний</b> ти вносиш свідомо.",
+      pick:"Ти залишив його сам чи він зібрався автоматично?",
+      win:"Ти розумієш, який слід лишаєш у мережі 💪",
+      folders:[{name:"Пасивний",ic:"🕵️"},{name:"Активний",ic:"✍️"}],
+      items:[
+        {n:"Список відвіданих сайтів",ic:"🌐",f:"Пасивний"},
+        {n:"Пошукові запити",ic:"🔎",f:"Пасивний"},
+        {n:"Адреса комп'ютера",ic:"🖥️",f:"Пасивний"},
+        {n:"Твій пост у соцмережі",ic:"📝",f:"Активний"},
+        {n:"Створений тобою обліковий запис",ic:"👤",f:"Активний"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 5 — Розумні дії (ГР 4) ═══════════
+  function round5(){
+    pickRound({
+      task:"Познач дії, які РОЗУМНО робити 🛡️",
+      hint:"Останнє! Познач лише те, що <b>зменшує</b> цифровий слід або береже здоров'я.",
+      win:"Ти справжній знавець цифрової безпеки! 🏆",
+      items:[
+        {n:"Сесійні файли cookie", ok:true},
+        {n:"У друзі — лише знайомих", ok:true},
+        {n:"Перерва кожні 25 хвилин", ok:true},
+        {n:"Екран за 50–70 см від очей", ok:true},
+        {n:"Публікувати свою адресу", ok:false,s:"це персональні дані"},
+        {n:"Зберігати паролі на спільному ПК", ok:false,s:"їх побачать інші"},
+        {n:"Додавати незнайомців у друзі", ok:false,s:"ти не знаєш, хто це"}
+      ]
+    });
+  }
+
+  // ═══════════════ Фінал ═══════════════
+  function finale(){
+    dotsEl.querySelectorAll("i").forEach(d=>d.className="done");
+    document.querySelector(".card .actions").style.display="none";
+    const earned = Math.max(0, MAX - mistakes);
+    const localGrade = Math.max(1, Math.round(1+11*earned/MAX));
+    say.innerHTML="Зберігаю твій результат… ⏳";
+    stage.innerHTML='<div class="win"><div class="big">⏳</div><h2>Рахуємо оцінку…</h2></div>';
+    const finish = (grade, remaining, note) => {
+      const canRetry = remaining > 0;
+      say.innerHTML="Ти пройшов підсумкову роботу ГР 1 та ГР 4! 🎉";
+      stage.innerHTML=`<div class="win">
+        <div class="big">🏆</div>
+        <h2>Готово!</h2>
+        <div class="score">⭐ ${earned} / ${MAX} (помилок: ${mistakes})</div>
+        <div class="score" style="color:var(--ok)">Оцінка: ${grade} / 12</div>
+        <p>${note}</p>
+        ${canRetry ? '<button class="btn" id="again">Спробувати ще раз ↺</button>' : '<button class="btn ghost" id="home">Вийти ↩</button>'}
+      </div>`;
+      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; starsEl.textContent=0;
+        document.querySelector(".card .actions").style.display="flex";
+        nextBtn.textContent="Почати →"; nextBtn.disabled=false; paintDots();
+        say.innerHTML="Ще спроба — покажи максимум! 🚀"; stage.innerHTML=""; };
+      const home=$("home"); if(home) home.onclick=()=>{ location.href="../index.html"; };
+    };
+    if(window.submitResult){
+      window.submitResult(earned).then(res=>{
+        if(res && res.ok){
+          finish(res.grade, (res.remaining!=null?res.remaining:0),
+            (res.remaining>0 ? ("Залишилось спроб: "+res.remaining+" — можеш покращити.") : "Спроби використано. Зараховано найкращий результат."));
+        } else if(res && res.error && /вичерпано/i.test(res.error)){
+          finish(localGrade, 0, "Ти вже використав усі спроби.");
+        } else {
+          finish(localGrade, 0, "Не вдалося зберегти — покажи результат вчителю.");
+        }
+      }).catch(()=>finish(localGrade,0,"Не вдалося зберегти — покажи результат вчителю."));
+    } else {
+      finish(localGrade, 0, "Демо-режим.");
+    }
+  }
+
+  // ═══════════════ Керування раундами ═══════════════
+  const rounds=[round1,round2,round3,round4,round5];
+  function lockNext(){ nextBtn.disabled=true; nextBtn.textContent="Виконуй завдання…"; }
+  function done(){ nextBtn.disabled=false; nextBtn.textContent = round<TOTAL_ROUNDS-1 ? "Далі →" : "Фінал 🏁"; }
+
+  nextBtn.onclick=()=>{
+    if(round>=TOTAL_ROUNDS){ return; }
+    if(nextBtn.textContent.startsWith("Почати") || nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")){
+      if(nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")) round++;
+      if(round>=TOTAL_ROUNDS){ finale(); return; }
+      paintDots(); rounds[round]();
+    }
+  };
+  paintDots();
+})();
+</script>
+</body>
+</html>

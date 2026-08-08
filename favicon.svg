@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Навчальні ігри">
+  <!-- Іконка сайту навчальних ігор. Зірочка — бо саме зірочками
+       рахуються правильні дії в усіх іграх. Градієнт — гама сайту.
+       Написано кодом, а не згенеровано: SVG чіткий і на 16 px, і на 512 px. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff7a2f"/>
+      <stop offset=".55" stop-color="#ff5f8a"/>
+      <stop offset="1" stop-color="#7c5cff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#g)"/>
+  <path d="M32 15 L36.5 25.9 L48.2 26.8 L39.2 34.4 L42 45.8 L32 39.6 L22 45.8 L24.8 34.4 L15.8 26.8 L27.5 25.9 Z"
+        fill="#fff"/>
+</svg>

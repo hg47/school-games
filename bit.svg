@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Робот Біт">
+  <!-- Робот Біт — наскрізний персонаж 5-А. Варіант D: графіт зі світним візором.
+       Персонажа НЕ змінено — той самий робот, лише сучасніша подача.
+       Написано кодом: чіткий і на 24 px, і на 512 px, важить ~1,6 КБ.
+
+       ⭐ ПАЛІТРА ОДНА НА ОБІ ТЕМИ, і це навмисно.
+       Раніше тут був @media (prefers-color-scheme) — графіт світлішав на
+       темному тлі. Але svg вставлений через <img>, тому media-запит слухає
+       НАСТРОЙКУ СИСТЕМИ, а не перемикач теми на сайті. Щойно з'явилася
+       кнопка «авто / світла / темна», ці двоє почали розходитися: вибрав
+       світлу на машині з темною системою — і робот лишався в темній гамі
+       на білій картці.
+       ⭐ Замість палітри під тему — межа, яку видно на будь-якому тлі:
+       темний контур ЗЗОВНІ (читається на світлому) плюс світлий волосок
+       УСЕРЕДИНІ (читається на темному). Графіт узято середній між двома
+       колишніми варіантами, щоб не вигорав на білому й не тонув на чорному. -->
+  <style>
+    :root{
+      --h1:#aab5c5; --h2:#78839a; --h3:#4b5566;
+      --e1:#98a3b4; --e2:#666f80;
+      --visor:#0a0c11; --eye:#ff7a3c; --ant:#7c5cff;
+      --mouth:#eef2f7;
+      --rim:rgba(255,255,255,.22);      /* волосок усередині — видно на темному */
+      --halo:rgba(9,11,17,.28);         /* контур зовні — видно на світлому */
+    }
+    #s1{stop-color:var(--h1)} #s2{stop-color:var(--h2)} #s3{stop-color:var(--h3)}
+    #t1{stop-color:var(--e1)} #t2{stop-color:var(--e2)}
+    .metal{fill:url(#ear)}
+    .halo{fill:none; stroke:var(--halo); stroke-width:2.5}
+    .head{fill:url(#bg); stroke:var(--rim); stroke-width:1}
+    .visor{fill:var(--visor)}
+    .eye{fill:var(--eye)}
+    .ant{fill:var(--ant)}
+    .mouth{stroke:var(--mouth)}
+  </style>
+  <defs>
+    <linearGradient id="bg" x1="14" y1="12" x2="50" y2="48" gradientUnits="userSpaceOnUse">
+      <stop id="s1" offset="0"/><stop id="s2" offset=".55"/><stop id="s3" offset="1"/>
+    </linearGradient>
+    <linearGradient id="ear" x1="0" y1="0" x2="0" y2="1">
+      <stop id="t1" offset="0"/><stop id="t2" offset="1"/>
+    </linearGradient>
+    <filter id="glow" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- антена -->
+  <path d="M32 13V8" stroke="url(#ear)" stroke-width="3" stroke-linecap="round"/>
+  <circle class="ant" cx="32" cy="5.5" r="3.5"/>
+
+  <!-- «вуха» -->
+  <rect class="metal" x="6.5" y="26" width="5" height="12" rx="2.5"/>
+  <rect class="metal" x="52.5" y="26" width="5" height="12" rx="2.5"/>
+
+  <!-- голова: спершу темний контур, потім сама голова зі світлим волоском.
+       Обведення центроване, тому halo виступає на ~1,25 px за межу голови —
+       рівно стільки, щоб на білій картці з'явився край. -->
+  <rect class="halo" x="13" y="13" width="38" height="34" rx="12"/>
+  <rect class="head" x="13" y="13" width="38" height="34" rx="12"/>
+
+  <!-- візор: одне темне вікно замість двох окремих очей — так читається
+       навіть на 24 px, і саме так виглядають сучасні іконки роботів -->
+  <rect class="visor" x="19" y="21" width="26" height="14" rx="7" opacity=".95"/>
+  <g filter="url(#glow)">
+    <circle class="eye" cx="26.5" cy="28" r="3.2"/>
+    <circle class="eye" cx="37.5" cy="28" r="3.2"/>
+  </g>
+
+  <!-- усмішка: дуга, а не планка — Біт персонаж 5-А, він мусить бути дружнім -->
+  <path class="mouth" d="M26 39.6q6 4.6 12 0" fill="none" stroke-width="3"
+        stroke-linecap="round" opacity=".9"/>
+
+  <!-- плечі -->
+  <path class="metal" d="M20 52c0-3.3 2.7-6 6-6h12c3.3 0 6 2.7 6 6v3H20z" opacity=".92"/>
+</svg>

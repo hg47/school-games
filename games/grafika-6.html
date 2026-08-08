@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Графіка: растр, вектор і свідомий вибір — гра для 6 класу</title>
+<meta name="description" content="Підсумкова робота ГР 1 та ГР 4: цифрові пристрої, класифікація, етапи створення презентації, цифровий слід і безпека. Для 6 класу.">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/game.css">
+<script src="../assets/theme.js"></script>
+<script src="../supabase-config.js"></script>
+<script src="../assets/db.js"></script>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml" data-head-v1>
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="logo"><span class="dot"></span>Графіка 6</div>
+    <div class="spacer"></div>
+    <div class="dots" id="dots" aria-hidden="true"></div>
+    <div class="stars">⭐ <b id="stars">0</b></div>
+  </div>
+
+  <div class="card">
+    <div class="head">
+      <div class="bit" aria-hidden="true">🛸</div>
+      <div class="bubble" id="say">Привіт! Я дрон <b>Байт</b>. Перевіримо, чи вмієш ти обирати інструмент <b>свідомо</b>.</div>
+    </div>
+    <div class="stage" id="stage"></div>
+    <div class="actions" style="padding:0 18px 22px">
+      <button class="btn" id="next">Почати →</button>
+    </div>
+  </div>
+
+  <footer>Підсумкова робота ГР 3 · «Графіка: свідомий вибір» · 6 клас<br><span class="sig" data-sig>© 2025–2026 Процюк О. К. · вчитель інформатики · Харківський ліцей № 47</span><br><a class="doclink" data-doc href="../about.html">Про сайт і дані</a></footer>
+</div>
+<div class="flash" id="flash" aria-hidden="true">⭐</div>
+
+<script>
+(() => {
+  "use strict";
+  const PLAY = (()=>{ try{ return JSON.parse(sessionStorage.getItem('play')||'null'); }catch(e){ return null; } })();
+  if(!PLAY || PLAY.game_slug !== 'grafika-6'){ location.replace('../index.html'); return; }
+  (function(){ var s0=document.getElementById('say'); if(s0) s0.innerHTML='Привіт, <b>'+(PLAY.student_name||'друже')+'</b>! Я дрон Байт. Це підсумкова гра ГР 3 з теми «Графічні зображення». Тут важливо не швидкість, а <b>свідомий вибір</b>. Спроб лишилось: <b>'+(PLAY.remaining!=null?PLAY.remaining:'?')+'</b>.'; })();
+  const $ = id => document.getElementById(id);
+  const stage=$("stage"), say=$("say"), nextBtn=$("next"), starsEl=$("stars"), dotsEl=$("dots");
+  let stars=0, round=0, mistakes=0;
+  const TOTAL_ROUNDS=5;
+  const MAX=27; // 6 + 6 + 5 + 4 + 6
+
+  for(let i=0;i<TOTAL_ROUNDS;i++){const d=document.createElement("i"); dotsEl.appendChild(d);}
+  const paintDots=()=>{[...dotsEl.children].forEach((d,i)=>{d.className = i<round?"done":(i===round?"on":"");});};
+
+  const addStar = (n=1) => {
+    stars+=n; starsEl.textContent=stars;
+    const f=$("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
+  };
+  const bit = html => { say.innerHTML=html; };
+  const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
+
+  // ── Універсальний раунд «розклади по папках» ──
+  function sortRound(cfg){
+    bit(cfg.hint);
+    let sel=null, left=cfg.items.length;
+    stage.innerHTML=`<p class="task">${cfg.task}</p>
+      <div class="pool" id="pool"></div>
+      <div class="targets" id="targets"></div>`;
+    const pool=$("pool"), targets=$("targets");
+    shuffle(cfg.items.slice()).forEach(it=>{
+      const b=document.createElement("button"); b.className="tile";
+      b.innerHTML=`<span class="ic">${it.ic}</span>${it.n}`;
+      b.onclick=()=>{ if(b.classList.contains("gone"))return;
+        [...pool.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); targets.classList.add("armed");
+        sel=it; sel.el=b;
+        bit(`Обрано: <b>${it.n}</b>. ${cfg.pick}`); };
+      pool.appendChild(b);
+    });
+    const counts={}; cfg.folders.forEach(f=>counts[f.name]=0);
+    cfg.folders.forEach(f=>{
+      const d=document.createElement("div"); d.className="folder"; d.tabIndex=0; d.setAttribute("role","button");
+      d.innerHTML=`<div class="fic">${f.ic}</div><div class="fname">${f.name}</div><div class="cnt">0</div>`;
+      const act=()=>{
+        if(!sel){ bit("Спочатку торкнись <b>картки</b>, потім папки 🙂"); d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300); return; }
+        if(sel.f===f.name){
+          sel.el.classList.add("gone"); counts[f.name]++; d.querySelector(".cnt").textContent=counts[f.name];
+          d.classList.add("hit"); setTimeout(()=>d.classList.remove("hit"),300);
+          addStar(); left--; sel=null; targets.classList.remove("armed");
+          if(left===0){ bit(cfg.win); done(); } else bit("Правильно! 👍 Далі?");
+        } else {
+          d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300);
+          mistakes++; bit(`Подумай ще: <b>${sel.n}</b> — точно сюди?`);
+        }
+      };
+      d.onclick=act; d.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();act();}};
+      targets.appendChild(d);
+    });
+    lockNext();
+  }
+
+  // ── Універсальний раунд «познач правильні» ──
+  function pickRound(cfg){
+    bit(cfg.hint);
+    let found=0; const total=cfg.items.filter(x=>x.ok).length;
+    stage.innerHTML=`<p class="task">${cfg.task}</p><div class="pool" id="pool"></div>`;
+    const pool=$("pool");
+    shuffle(cfg.items.slice()).forEach(it=>{
+      const b=document.createElement("button"); b.className="tile"; b.style.minWidth="160px";
+      // ⚠️ Іконка НЕ показує правильність: у всіх плиток однаковий порожній
+      //    квадратик. Галочка з'являється лише після правильного вибору.
+      //    it.ic у даних лишено, але свідомо НЕ рендериться — інакше
+      //    учень набирав би повний бал, клікаючи по ✅ й не читаючи тексту.
+      b.innerHTML=`<span class="pbox" aria-hidden="true">\u2713</span>${it.n}`;
+      b.onclick=()=>{
+        if(b.dataset.done)return;
+        if(it.ok){ b.classList.add("ok"); b.dataset.done=1; addStar(); found++;
+          bit("Так, правильно ✅"); if(found===total){ bit(cfg.win); done(); } }
+        else { const bx=b.querySelector(".pbox"); b.classList.add("err");
+          if(bx) bx.textContent="\u2715";
+          setTimeout(()=>{ b.classList.remove("err"); if(bx) bx.textContent="\u2713"; },900);
+          mistakes++; bit(`Ні — <b>${it.n}</b>: ${it.s}.`); }
+      };
+      pool.appendChild(b);
+    });
+    lockNext();
+  }
+
+  // ── Раунд «розстав по порядку» ──
+  function orderRound(cfg){
+    bit(cfg.hint);
+    let step=0;
+    stage.innerHTML=`<p class="task">${cfg.task}</p><div class="pool" id="pool"></div>`;
+    const pool=$("pool");
+    shuffle(cfg.steps.slice()).forEach(it=>{
+      const b=document.createElement("button"); b.className="tile"; b.style.minWidth="200px";
+      b.innerHTML=`<span class="ic">${it.ic}</span>${it.n}`;
+      b.onclick=()=>{
+        if(b.dataset.done)return;
+        if(it.i===step){
+          step++; b.dataset.done=1; b.classList.add("ok");
+          b.insertAdjacentHTML("afterbegin",`<span class="num">${step}</span>`);
+          addStar();
+          if(step===cfg.steps.length){ bit(cfg.win); done(); }
+          else bit(`Так! Крок ${step} правильний. Що далі?`);
+        } else {
+          b.classList.add("err"); setTimeout(()=>b.classList.remove("err"),400);
+          mistakes++; bit(`Ні, це не крок ${step+1}. Подумай, що робимо <b>раніше</b>.`);
+        }
+      };
+      pool.appendChild(b);
+    });
+    lockNext();
+  }
+
+  // ═══════════ РАУНД 1 — Растр чи вектор під задачу ═══════════
+  function round1(){
+    sortRound({
+      task:"Який вид графіки доцільний для цієї задачі? 🎨",
+      hint:"Згадай: <b>вектор</b> масштабується без утрати якості, <b>растр</b> передає реальність. Спершу торкнись картки, потім — папки.",
+      pick:"Тут потрібен вектор чи растр?",
+      win:"Чудово! Ти обираєш вид графіки під задачу, а не навмання ✨",
+      folders:[{name:"Вектор",ic:"📐"},{name:"Растр",ic:"🖼️"}],
+      items:[
+        {n:"Логотип школи на банер",ic:"🏫",f:"Вектор"},
+        {n:"Піктограми застосунків",ic:"📱",f:"Вектор"},
+        {n:"Креслення деталі",ic:"📏",f:"Вектор"},
+        {n:"Фото класу",ic:"📷",f:"Растр"},
+        {n:"Репродукція картини",ic:"🖌️",f:"Растр"},
+        {n:"Скан сторінки зошита",ic:"📄",f:"Растр"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 2 — Чим малювати цей елемент (ядро ГР 3) ═══════════
+  function round2(){
+    sortRound({
+      task:"Чим краще зробити цей елемент? 🛠️",
+      hint:"Головний раунд. <b>Крива Безьє</b> — для плавного; <b>примітив</b> — для геометричного; <b>копіювання</b> — для того, що повторюється.",
+      pick:"Яким засобом це зробити найрозумніше?",
+      win:"Це і є свідомий вибір інструмента! 🎯",
+      folders:[{name:"Крива Безьє",ic:"〰️"},{name:"Готовий примітив",ic:"▭"},{name:"Копіювання",ic:"⧉"}],
+      items:[
+        {n:"Плавне стебло квітки",ic:"🌱",f:"Крива Безьє"},
+        {n:"Хвиля на морі",ic:"🌊",f:"Крива Безьє"},
+        {n:"Прямокутне вікно будинку",ic:"🪟",f:"Готовий примітив"},
+        {n:"Сонце — рівне коло",ic:"☀️",f:"Готовий примітив"},
+        {n:"Вісім однакових пелюсток",ic:"🌸",f:"Копіювання"},
+        {n:"Ряд однакових плиток орнаменту",ic:"🧱",f:"Копіювання"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 3 — Порядок дій ═══════════
+  function round3(){
+    orderRound({
+      task:"Розстав кроки створення векторного зображення 1 → 5",
+      hint:"Натискай кроки <b>в правильному порядку</b>. Пам'ятай, без якого кроку нічого не працює.",
+      win:"Так! Без векторного шару не було б чого малювати 🏁",
+      steps:[
+        {i:0,n:"Створити новий файл",ic:"📄"},
+        {i:1,n:"Додати векторний шар",ic:"🗂️"},
+        {i:2,n:"Намалювати об'єкти",ic:"✏️"},
+        {i:3,n:"Упорядкувати й згрупувати",ic:"📐"},
+        {i:4,n:"Зберегти як SVG",ic:"💾"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 4 — Засобом програми чи «на око» ═══════════
+  function round4(){
+    pickRound({
+      task:"Познач те, що роблять ЗАСОБОМ програми, а не на око 🎯",
+      hint:"Свідомо — це коли точність дає <b>програма</b>, а не рука з мишею.",
+      win:"Правильно! Точність — робота програми, а не ока 💪",
+      items:[
+        {n:"Вирівняти 5 квіток у ряд — Компонування", ok:true},
+        {n:"Однакова відстань — Інтервал", ok:true},
+        {n:"Два однакові прямокутники — числа в Геометрії", ok:true},
+        {n:"Розподілити по вертикалі — Розподілити", ok:true},
+        {n:"Підганяти мишею, доки не «схоже»", ok:false,s:"це не точність, а здогад"},
+        {n:"Прикласти лінійку до екрана", ok:false,s:"екран показує не справжній розмір"},
+        {n:"Копіювати й трохи посунути кожен", ok:false,s:"відстані вийдуть різними"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 5 — У чому зберігати ═══════════
+  function round5(){
+    sortRound({
+      task:"У якому форматі це зберегти? 💾",
+      hint:"Останній раунд. <b>SVG</b> — вектор; <b>PNG</b> — готовий результат; <b>KRA/PSD</b> — робочий файл із шарами.",
+      pick:"Який формат тут доцільний?",
+      win:"Ти справжній знавець графіки! 🏆",
+      folders:[{name:"SVG",ic:"📐"},{name:"PNG",ic:"🖼️"},{name:"KRA / PSD",ic:"🗂️"}],
+      items:[
+        {n:"Логотип для друку на банері",ic:"🏷️",f:"SVG"},
+        {n:"Векторний малюнок для сайту",ic:"🌐",f:"SVG"},
+        {n:"Готова робота для Classroom",ic:"📤",f:"PNG"},
+        {n:"Скріншот екрана з результатом",ic:"📸",f:"PNG"},
+        {n:"Файл, який ще будемо редагувати",ic:"🔧",f:"KRA / PSD"},
+        {n:"Малюнок із кількома шарами",ic:"🧅",f:"KRA / PSD"}
+      ]
+    });
+  }
+
+  // ═══════════════ Фінал ═══════════════
+  function finale(){
+    dotsEl.querySelectorAll("i").forEach(d=>d.className="done");
+    document.querySelector(".card .actions").style.display="none";
+    const earned = Math.max(0, MAX - mistakes);
+    const localGrade = Math.max(1, Math.round(1+11*earned/MAX));
+    say.innerHTML="Зберігаю твій результат… ⏳";
+    stage.innerHTML='<div class="win"><div class="big">⏳</div><h2>Рахуємо оцінку…</h2></div>';
+    const finish = (grade, remaining, note) => {
+      const canRetry = remaining > 0;
+      say.innerHTML="Ти пройшов гру підсумкової роботи ГР 3! 🎉";
+      stage.innerHTML=`<div class="win">
+        <div class="big">🏆</div>
+        <h2>Готово!</h2>
+        <div class="score">⭐ ${earned} / ${MAX} (помилок: ${mistakes})</div>
+        <div class="score" style="color:var(--ok)">Оцінка за гру: ${grade} / 12</div>
+        <p>${note}</p>
+        <p style="opacity:.75;font-size:14px">Це <b>перша</b> частина роботи. Друга — твоє власне зображення на уроці.</p>
+        ${canRetry ? '<button class="btn" id="again">Спробувати ще раз ↺</button>' : '<button class="btn ghost" id="home">Вийти ↩</button>'}
+      </div>`;
+      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; starsEl.textContent=0;
+        document.querySelector(".card .actions").style.display="flex";
+        nextBtn.textContent="Почати →"; nextBtn.disabled=false; paintDots();
+        say.innerHTML="Ще спроба — покажи максимум! 🚀"; stage.innerHTML=""; };
+      const home=$("home"); if(home) home.onclick=()=>{ location.href="../index.html"; };
+    };
+    if(window.submitResult){
+      window.submitResult(earned).then(res=>{
+        if(res && res.ok){
+          finish(res.grade, (res.remaining!=null?res.remaining:0),
+            (res.remaining>0 ? ("Залишилось спроб: "+res.remaining+" — можеш покращити.") : "Спроби використано. Зараховано найкращий результат."));
+        } else if(res && res.error && /вичерпано/i.test(res.error)){
+          finish(localGrade, 0, "Ти вже використав усі спроби.");
+        } else {
+          finish(localGrade, 0, "Не вдалося зберегти — покажи результат вчителю.");
+        }
+      }).catch(()=>finish(localGrade,0,"Не вдалося зберегти — покажи результат вчителю."));
+    } else {
+      finish(localGrade, 0, "Демо-режим.");
+    }
+  }
+
+  // ═══════════════ Керування раундами ═══════════════
+  const rounds=[round1,round2,round3,round4,round5];
+  function lockNext(){ nextBtn.disabled=true; nextBtn.textContent="Виконуй завдання…"; }
+  function done(){ nextBtn.disabled=false; nextBtn.textContent = round<TOTAL_ROUNDS-1 ? "Далі →" : "Фінал 🏁"; }
+
+  nextBtn.onclick=()=>{
+    if(round>=TOTAL_ROUNDS){ return; }
+    if(nextBtn.textContent.startsWith("Почати") || nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")){
+      if(nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")) round++;
+      if(round>=TOTAL_ROUNDS){ finale(); return; }
+      paintDots(); rounds[round]();
+    }
+  };
+  paintDots();
+})();
+</script>
+</body>
+</html>

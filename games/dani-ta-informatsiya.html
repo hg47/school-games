@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Дані та інформація — гра для 5 класу</title>
+<meta name="description" content="Підсумкова робота ГР 1: види повідомлень, зорова інформація, інформаційні процеси та типи даних. Для 5 класу.">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/game.css">
+<script src="../assets/theme.js"></script>
+<script src="../supabase-config.js"></script>
+<script src="../assets/db.js"></script>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml" data-head-v1>
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="logo"><span class="dot"></span>Дані та інформація</div>
+    <div class="spacer"></div>
+    <div class="dots" id="dots" aria-hidden="true"></div>
+    <div class="stars">⭐ <b id="stars">0</b></div>
+  </div>
+
+  <div class="card">
+    <div class="head">
+      <div class="bit bit-img" aria-hidden="true"><img src="../bit.svg" alt="" width="56" height="56"></div>
+      <div class="bubble" id="say">Привіт! Я робот <b>Біт</b>. Перевіримо, як ти вмієш працювати з інформацією та даними?</div>
+    </div>
+    <div class="stage" id="stage"></div>
+    <div class="actions" style="padding:0 18px 22px">
+      <button class="btn" id="next">Почати →</button>
+    </div>
+  </div>
+
+  <footer>Підсумкова робота ГР 1 · «Дані та інформація» · 5 клас<br><span class="sig" data-sig>© 2025–2026 Процюк О. К. · вчитель інформатики · Харківський ліцей № 47</span><br><a class="doclink" data-doc href="../about.html">Про сайт і дані</a></footer>
+</div>
+<div class="flash" id="flash" aria-hidden="true">⭐</div>
+
+<script>
+(() => {
+  "use strict";
+  const PLAY = (()=>{ try{ return JSON.parse(sessionStorage.getItem('play')||'null'); }catch(e){ return null; } })();
+  if(!PLAY || PLAY.game_slug !== 'dani-ta-informatsiya'){ location.replace('../index.html'); return; }
+  (function(){ var s0=document.getElementById('say'); if(s0) s0.innerHTML='Привіт, <b>'+(PLAY.student_name||'друже')+'</b>! Я робот Біт. Це підсумкова гра про інформацію та дані. Спроб лишилось: <b>'+(PLAY.remaining!=null?PLAY.remaining:'?')+'</b>.'; })();
+  const $ = id => document.getElementById(id);
+  const stage=$("stage"), say=$("say"), nextBtn=$("next"), starsEl=$("stars"), dotsEl=$("dots");
+  let stars=0, round=0, mistakes=0;
+  const TOTAL_ROUNDS=4;
+  const MAX=21; // 6 + 4 + 5 + 6
+
+  for(let i=0;i<TOTAL_ROUNDS;i++){const d=document.createElement("i"); dotsEl.appendChild(d);}
+  const paintDots=()=>{[...dotsEl.children].forEach((d,i)=>{d.className = i<round?"done":(i===round?"on":"");});};
+
+  const addStar = (n=1) => {
+    stars+=n; starsEl.textContent=stars;
+    const f=$("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
+  };
+  const bit = html => { say.innerHTML=html; };
+
+  // ═══════════════ РАУНД 1 — Види повідомлень ═══════════════
+  function round1(){
+    bit("Розклади повідомлення за <b>способом подання</b>: спершу торкнись картки, потім — потрібної папки.");
+    const items=[
+      {n:"лист другу",ic:"✉️",f:"Текстове"},{n:"новина в газеті",ic:"📰",f:"Текстове"},
+      {n:"фотографія",ic:"🖼️",f:"Графічне"},{n:"малюнок",ic:"🎨",f:"Графічне"},
+      {n:"пісня",ic:"🎵",f:"Звукове"},{n:"дзвінок будильника",ic:"🔔",f:"Звукове"},
+    ];
+    const folders=["Текстове","Графічне","Звукове"];
+    let sel=null, left=items.length;
+    stage.innerHTML=`<p class="task">Який це вид повідомлення? 📨</p>
+      <div class="pool" id="pool"></div>
+      <div class="targets" id="targets"></div>`;
+    const pool=$("pool"), targets=$("targets");
+    items.forEach((it,i)=>{
+      const b=document.createElement("button"); b.className="tile"; b.dataset.i=i;
+      b.innerHTML=`<span class="ic">${it.ic}</span>${it.n}`;
+      b.onclick=()=>{ if(b.classList.contains("gone"))return;
+        [...pool.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); targets.classList.add("armed"); sel=it; sel.el=b;
+        bit(`Обрано: <b>${it.n}</b>. Тепер торкнись потрібної папки.`); };
+      pool.appendChild(b);
+    });
+    const counts={}; folders.forEach(x=>counts[x]=0);
+    folders.forEach(name=>{
+      const d=document.createElement("div"); d.className="folder"; d.tabIndex=0; d.setAttribute("role","button");
+      const fic = name==="Текстове"?"📝":(name==="Графічне"?"🖼️":"🎵");
+      d.innerHTML=`<div class="fic">${fic}</div><div class="fname">${name}</div><div class="cnt">0</div>`;
+      const act=()=>{
+        if(!sel){ bit("Спочатку торкнись <b>картки</b>, потім папки 🙂"); d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300); return; }
+        if(sel.f===name){
+          sel.el.classList.add("gone"); counts[name]++; d.querySelector(".cnt").textContent=counts[name];
+          d.classList.add("hit"); setTimeout(()=>d.classList.remove("hit"),300);
+          addStar(); left--; sel=null; targets.classList.remove("armed");
+          if(left===0){ bit("Чудово! Усі повідомлення на місцях ✨"); done(); }
+          else bit("Правильно! 👍 Наступне?");
+        } else {
+          d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300);
+          mistakes++; bit(`Ні. Подумай: <b>${sel.n}</b> — це текст, зображення чи звук?`);
+        }
+      };
+      d.onclick=act; d.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();act();}};
+      targets.appendChild(d);
+    });
+    lockNext();
+  }
+
+  // ═══════════════ РАУНД 2 — Зорова інформація ═══════════════
+  function round2(){
+    bit("Познач лише те, що ми сприймаємо <b>очима</b> (зорова інформація).");
+    const items=[
+      {n:"веселка", ok:true},{n:"музика", ok:false,s:"це слухова"},
+      {n:"картина", ok:true},{n:"аромат квітів", ok:false,s:"це нюхова"},
+      {n:"світлофор", ok:true},{n:"смак яблука", ok:false,s:"це смакова"},
+      {n:"текст у книзі", ok:true},{n:"спів пташки", ok:false,s:"це слухова"},
+    ];
+    let foundGood=0; const totalGood=items.filter(x=>x.ok).length;
+    stage.innerHTML=`<p class="task">Що ми сприймаємо ОЧИМА? 👀</p><div class="pool" id="pool"></div>`;
+    const pool=$("pool");
+    items.forEach(it=>{
+      const b=document.createElement("button"); b.className="tile"; b.style.minWidth="150px";
+      b.innerHTML=`<span class="pbox" aria-hidden="true">\u2713</span>${it.n}`;
+      b.onclick=()=>{
+        if(b.dataset.done)return;
+        if(it.ok){ b.classList.add("ok"); b.dataset.done=1; addStar(); foundGood++;
+          bit("Так, це зорова інформація ✅"); if(foundGood===totalGood){ bit("Ти знайшов усю зорову інформацію! 🎯"); done(); } }
+        else { const bx=b.querySelector(".pbox"); b.classList.add("err");
+          if(bx) bx.textContent="\u2715";
+          setTimeout(()=>{ b.classList.remove("err"); if(bx) bx.textContent="\u2713"; },900);
+          mistakes++; bit(`Ні — <b>${it.n}</b>: ${it.s}, не зорова.`); }
+      };
+      pool.appendChild(b);
+    });
+    lockNext();
+  }
+
+  // ═══════════════ РАУНД 3 — Інформаційні процеси ═══════════════
+  function round3(){
+    const q=[
+      {t:"Вчителька читає нам умову задачі",a:"Передавання"},
+      {t:"Записуємо відповідь у зошит",a:"Зберігання"},
+      {t:"Шукаємо потрібну статтю в Інтернеті",a:"Пошук"},
+      {t:"Рахуємо приклад і отримуємо результат",a:"Опрацювання"},
+      {t:"Зберігаємо фото на флешку",a:"Зберігання"},
+    ];
+    const ops=["Передавання","Зберігання","Опрацювання","Пошук"];
+    let qi=0;
+    bit("Який <b>інформаційний процес</b> тут відбувається? Тисни кнопку.");
+    const render=()=>{
+      stage.innerHTML=`<p class="task">Що це за процес? (${qi+1} / ${q.length})</p>
+        <div class="prompt">${q[qi].t}</div><div class="ops" id="ops"></div>`;
+      const box=$("ops");
+      ops.forEach(o=>{
+        const b=document.createElement("button"); b.className="op"; b.textContent=o;
+        b.onclick=()=>{
+          if(o===q[qi].a){ b.classList.add("ok"); addStar(); qi++;
+            if(qi<q.length){ bit("Точно! 🔥"); setTimeout(render,550); }
+            else { bit("Ти знаєш усі інформаційні процеси! 💪"); done(); } }
+          else { b.classList.add("err"); setTimeout(()=>b.classList.remove("err"),400);
+            mistakes++; bit("Не зовсім. Пригадай: передавання, зберігання, опрацювання чи пошук?"); }
+        };
+        box.appendChild(b);
+      });
+    };
+    render(); lockNext();
+  }
+
+  // ═══════════════ РАУНД 4 — Типи даних ═══════════════
+  function round4(){
+    bit("Останнє! Розклади дані за <b>типом</b>: числові, текстові чи графічні.");
+    const items=[
+      {n:"125",ic:"🔢",f:"Числові"},{n:"твій вік",ic:"🔢",f:"Числові"},
+      {n:"ім'я «Оля»",ic:"🔤",f:"Текстові"},{n:"вірш",ic:"🔤",f:"Текстові"},
+      {n:"фотографія",ic:"🖼️",f:"Графічні"},{n:"схема",ic:"🖼️",f:"Графічні"},
+    ];
+    const folders=["Числові","Текстові","Графічні"];
+    let sel=null, left=items.length;
+    stage.innerHTML=`<p class="task">Який це тип даних? 🧩</p>
+      <div class="pool" id="pool"></div>
+      <div class="targets" id="targets"></div>`;
+    const pool=$("pool"), targets=$("targets");
+    items.forEach((it,i)=>{
+      const b=document.createElement("button"); b.className="tile"; b.dataset.i=i;
+      b.innerHTML=`<span class="ic">${it.ic}</span>${it.n}`;
+      b.onclick=()=>{ if(b.classList.contains("gone"))return;
+        [...pool.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); targets.classList.add("armed"); sel=it; sel.el=b;
+        bit(`Обрано: <b>${it.n}</b>. Торкнись потрібної папки.`); };
+      pool.appendChild(b);
+    });
+    const counts={}; folders.forEach(x=>counts[x]=0);
+    folders.forEach(name=>{
+      const d=document.createElement("div"); d.className="folder"; d.tabIndex=0; d.setAttribute("role","button");
+      const fic = name==="Числові"?"🔢":(name==="Текстові"?"🔤":"🖼️");
+      d.innerHTML=`<div class="fic">${fic}</div><div class="fname">${name}</div><div class="cnt">0</div>`;
+      const act=()=>{
+        if(!sel){ bit("Спочатку торкнись <b>картки</b>, потім папки 🙂"); d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300); return; }
+        if(sel.f===name){
+          sel.el.classList.add("gone"); counts[name]++; d.querySelector(".cnt").textContent=counts[name];
+          d.classList.add("hit"); setTimeout(()=>d.classList.remove("hit"),300);
+          addStar(); left--; sel=null; targets.classList.remove("armed");
+          if(left===0){ bit("Ідеально! Дані розкладено ✨"); done(); }
+          else bit("Правильно! 👍 Наступне?");
+        } else {
+          d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300);
+          mistakes++; bit(`Ні. <b>${sel.n}</b> — це число, текст чи зображення?`);
+        }
+      };
+      d.onclick=act; d.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();act();}};
+      targets.appendChild(d);
+    });
+    lockNext();
+  }
+
+  // ═══════════════ Фінал ═══════════════
+  function finale(){
+    dotsEl.querySelectorAll("i").forEach(d=>d.className="done");
+    document.querySelector(".card .actions").style.display="none";
+    const earned = Math.max(0, MAX - mistakes);
+    const localGrade = Math.max(1, Math.round(1+11*earned/MAX));
+    say.innerHTML="Зберігаю твій результат… ⏳";
+    stage.innerHTML='<div class="win"><div class="big">⏳</div><h2>Рахуємо оцінку…</h2></div>';
+    const finish = (grade, remaining, note) => {
+      const canRetry = remaining > 0;
+      say.innerHTML="Ти впорався з підсумковою роботою про дані та інформацію! 🎉";
+      stage.innerHTML=`<div class="win">
+        <div class="big">🏆</div>
+        <h2>Готово!</h2>
+        <div class="score">⭐ ${earned} / ${MAX} (помилок: ${mistakes})</div>
+        <div class="score" style="color:var(--ok)">Оцінка: ${grade} / 12</div>
+        <p>${note}</p>
+        ${canRetry ? '<button class="btn" id="again">Спробувати ще раз ↺</button>' : '<button class="btn ghost" id="home">Вийти ↩</button>'}
+      </div>`;
+      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; starsEl.textContent=0;
+        document.querySelector(".card .actions").style.display="flex";
+        nextBtn.textContent="Почати →"; nextBtn.disabled=false; paintDots();
+        say.innerHTML="Ще спроба — покажи максимум! 🚀"; stage.innerHTML=""; };
+      const home=$("home"); if(home) home.onclick=()=>{ location.href="../index.html"; };
+    };
+    if(window.submitResult){
+      window.submitResult(earned).then(res=>{
+        if(res && res.ok){
+          finish(res.grade, (res.remaining!=null?res.remaining:0),
+            (res.remaining>0 ? ("Залишилось спроб: "+res.remaining+" — можеш покращити.") : "Спроби використано. Зараховано найкращий результат."));
+        } else if(res && res.error && /вичерпано/i.test(res.error)){
+          finish(localGrade, 0, "Ти вже використав усі спроби.");
+        } else {
+          finish(localGrade, 0, "Не вдалося зберегти — покажи результат вчителю.");
+        }
+      }).catch(()=>finish(localGrade,0,"Не вдалося зберегти — покажи результат вчителю."));
+    } else {
+      finish(localGrade, 0, "Демо-режим.");
+    }
+  }
+
+  // ═══════════════ Керування раундами ═══════════════
+  const rounds=[round1,round2,round3,round4];
+  function lockNext(){ nextBtn.disabled=true; nextBtn.textContent="Виконуй завдання…"; }
+  function done(){ nextBtn.disabled=false; nextBtn.textContent = round<TOTAL_ROUNDS-1 ? "Далі →" : "Фінал 🏁"; }
+
+  nextBtn.onclick=()=>{
+    if(round>=TOTAL_ROUNDS){ return; }
+    if(nextBtn.textContent.startsWith("Почати") || nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")){
+      if(nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")) round++;
+      if(round>=TOTAL_ROUNDS){ finale(); return; }
+      paintDots(); rounds[round]();
+    }
+  };
+  paintDots();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Кодування даних: біти, байти й обчислення — гра для 8 класу</title>
+<meta name="description" content="Підсумкова робота ГР 1: двійковий код, біт і байт, переходи між одиницями, довжина коду тексту, розмір BMP. Для 8 класу.">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/game.css">
+<script src="../assets/theme.js"></script>
+
+
+<script src="../supabase-config.js"></script>
+<script src="../assets/db.js"></script>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml" data-head-v1>
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="logo"><span class="dot"></span>Кодування 8</div>
+    <div class="spacer"></div>
+    <div class="dots" id="dots" aria-hidden="true"></div>
+    <div class="stars">⭐ <b id="stars">0</b></div>
+  </div>
+
+  <div class="card">
+    <div class="head">
+      <div class="bit" aria-hidden="true">01</div>
+      <div class="bubble" id="say">Це підсумкова робота ГР 1. П'ять раундів: біти, байти, одиниці, довжина коду.</div>
+    </div>
+    <div class="stage" id="stage"></div>
+    <p class="helper">Ваги розрядів: <b>128 64 32 16 8 4 2 1</b> · 1 Б = 8 б · 1 кБ = 1024 Б · 1 МБ = 1024 кБ</p>
+    <div class="actions" style="padding:0 18px 22px">
+      <button class="btn" id="next">Почати →</button>
+    </div>
+  </div>
+
+  <footer>Підсумкова робота ГР 1 · «Кодування даних» · 8 клас · § 1.3<br><span class="sig" data-sig>© 2025–2026 Процюк О. К. · вчитель інформатики · Харківський ліцей № 47</span><br><a class="doclink" data-doc href="../about.html">Про сайт і дані</a></footer>
+</div>
+<div class="flash" id="flash" aria-hidden="true">⭐</div>
+
+<script>
+(() => {
+  "use strict";
+  const PLAY = (()=>{ try{ return JSON.parse(sessionStorage.getItem('play')||'null'); }catch(e){ return null; } })();
+  if(!PLAY || PLAY.game_slug !== 'koduvannya-8'){ location.replace('../index.html'); return; }
+  (function(){ var s0=document.getElementById('say'); if(s0) s0.innerHTML=
+    'Привіт, <b>'+(PLAY.student_name||'друже')+'</b>! Це <b>підсумкова робота ГР 1</b> з теми «Кодування даних». '
+    +'П\u2019ять раундів: прочитати байт, число \u2194 байт, переходи між одиницями, довжина коду тексту, розмір BMP. '
+    +'Кожна <b>помилкова</b> спроба знімає одну зірочку, тому рахуй, а не вгадуй. '
+    +'Спроб лишилось: <b>'+(PLAY.remaining!=null?PLAY.remaining:'?')+'</b>.'; })();
+
+  const $ = id => document.getElementById(id);
+  const stage=$("stage"), say=$("say"), nextBtn=$("next"), starsEl=$("stars"), dotsEl=$("dots");
+  let stars=0, round=0, mistakes=0;
+  const TOTAL_ROUNDS=5;
+  const MAX=18; // 4 + 4 + 5 + 3 + 2
+
+  for(let i=0;i<TOTAL_ROUNDS;i++){const d=document.createElement("i"); dotsEl.appendChild(d);}
+  const paintDots=()=>{[...dotsEl.children].forEach((d,i)=>{d.className = i<round?"done":(i===round?"on":"");});};
+
+  const addStar = (n=1) => {
+    stars+=n; starsEl.textContent=stars;
+    const f=$("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
+  };
+  const bit = html => { say.innerHTML=html; };
+  const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
+
+  // ── Раунд із числовою відповіддю (завдання одне за одним) ──
+  function numRound(cfg){
+    bit(cfg.hint);
+    let i=0;
+    const render=()=>{
+      const it=cfg.items[i];
+      stage.innerHTML=`<p class="task">${cfg.task}</p>
+        <div class="qbox">
+          <div class="qnum">Завдання ${i+1} з ${cfg.items.length}</div>
+          <div class="qtext">${it.q}</div>
+          <div class="qrow">
+            <input class="num-in" id="ans" type="text" inputmode="numeric" autocomplete="off"
+                   placeholder="?" aria-label="Твоя відповідь">
+            ${it.u ? `<span class="unit">${it.u}</span>` : ``}
+            <button class="btn" id="chk">Перевірити</button>
+          </div>
+          <div class="verdict" id="vd">Уведи число й натисни «Перевірити» (або Enter).</div>
+        </div>`;
+      const inp=$("ans"), vd=$("vd"), chk=$("chk");
+      try{ inp.focus(); }catch(e){}
+      const check=()=>{
+        const raw=(inp.value||"").replace(/\s|\u00a0/g,"").replace(",",".");
+        if(raw===""){ vd.textContent="Спочатку введи число \u{1F642}"; return; }
+        const val=Number(raw);
+        if(!isFinite(val)){ vd.textContent="Це не схоже на число. Спробуй ще."; return; }
+        if(Math.abs(val-it.a) < 1e-9){
+          addStar();
+          vd.innerHTML='<b style="color:var(--ok)">Правильно \u2705</b>' + (it.ok?(" "+it.ok):"");
+          inp.disabled=true; chk.disabled=true;
+          i++;
+          if(i>=cfg.items.length){ bit(cfg.win); done(); }
+          else setTimeout(render, 900);
+        } else {
+          mistakes++;
+          vd.innerHTML='<b style="color:var(--bad)">Ні.</b> ' + it.tip;
+          try{ inp.select(); }catch(e){}
+        }
+      };
+      chk.onclick=check;
+      inp.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); check(); } };
+    };
+    render(); lockNext();
+  }
+
+  // ── Раунд «познач правильні» ──
+  function pickRound(cfg){
+    bit(cfg.hint);
+    let found=0; const total=cfg.items.filter(x=>x.ok).length;
+    stage.innerHTML=`<p class="task">${cfg.task}</p><div class="pool" id="pool"></div>`;
+    const pool=$("pool");
+    shuffle(cfg.items.slice()).forEach(it=>{
+      const b=document.createElement("button"); b.className="tile"; b.style.minWidth="210px";
+      // ⚠️ Іконка НЕ показує правильність: у всіх плиток однаковий порожній
+      //    квадратик. Галочка з'являється лише після правильного вибору.
+      //    it.ic у даних лишено, але свідомо НЕ рендериться — інакше
+      //    учень набирав би повний бал, клікаючи по ✅ й не читаючи тексту.
+      b.innerHTML=`<span class="pbox" aria-hidden="true">\u2713</span>${it.n}`;
+      b.onclick=()=>{
+        if(b.dataset.done)return;
+        if(it.ok){ b.classList.add("ok"); b.dataset.done=1; addStar(); found++;
+          bit("Так, ця пара правильна \u2705"); if(found===total){ bit(cfg.win); done(); } }
+        else { const bx=b.querySelector(".pbox"); b.classList.add("err");
+          if(bx) bx.textContent="\u2715";
+          setTimeout(()=>{ b.classList.remove("err"); if(bx) bx.textContent="\u2713"; },900);
+          mistakes++; bit(`Ні \u2014 <b>${it.n}</b>: ${it.s}.`); }
+      };
+      pool.appendChild(b);
+    });
+    lockNext();
+  }
+
+  // ═══════════ РАУНД 1 — Прочитай байт (двійкова → десяткова) ═══════════
+  function round1(){
+    numRound({
+      task:"Прочитай двійковий запис \u2014 запиши число в десятковій системі",
+      hint:"Підпиши під одиницями їхні <b>ваги</b> (128 64 32 16 8 4 2 1) і <b>додай</b> лише ті, де стоїть 1.",
+      win:"Раунд 1 пройдено. Читати байт ти вмієш \u{1F44D}",
+      items:[
+        {q:"Яке десяткове число записано як <code>1011</code>?", a:11,
+         tip:"Ваги справа наліво: 1, 2, 4, 8. Додай ті, де стоїть одиниця.",
+         ok:"8 + 2 + 1 = 11"},
+        {q:"Яке десяткове число записано як <code>10010</code>?", a:18,
+         tip:"Тут п\u2019ять розрядів: ваги 16, 8, 4, 2, 1. Не забудь нуль у середині \u2014 він нічого не додає.",
+         ok:"16 + 2 = 18"},
+        {q:"Яке десяткове число записано байтом <code>00010100</code>?", a:20,
+         tip:"Провідні нулі нічого не змінюють. Дивись, під якими одиницями стоять ваги 16 і 4.",
+         ok:"16 + 4 = 20"},
+        {q:"Яке десяткове число записано байтом <code>01100100</code>?", a:100,
+         tip:"Ваги: 128 64 32 16 8 4 2 1. Одиниці стоять під 64, 32 і 4.",
+         ok:"64 + 32 + 4 = 100"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 2 — Число ↔ байт ═══════════
+  function round2(){
+    pickRound({
+      task:"Познач усі ПРАВИЛЬНІ пари «число \u2014 байт» \u{1F50E}",
+      hint:"Правильних пар <b>чотири</b>. Пам\u2019ятай: нулі дописують <b>злiва</b>, і в байті рівно вісім цифр.",
+      win:"Раунд 2 пройдено. Ти бачиш підміну в записі байта \u{1F3AF}",
+      items:[
+        {n:"5 = 00000101", ok:true},
+        {n:"13 = 00001101", ok:true},
+        {n:"20 = 00010100", ok:true},
+        {n:"63 = 00111111", ok:true},
+        {n:"5 = 10100000", ok:false, s:"нулі дописано праворуч, і це вже 160, а не 5"},
+        {n:"100 = 01100101", ok:false, s:"64+32+4+1 = 101, а не 100"},
+        {n:"18 = 00011000", ok:false, s:"16+8 = 24, а не 18"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 3 — Переходи між одиницями ═══════════
+  function round3(){
+    numRound({
+      task:"Переходи між одиницями \u2014 запиши лише число",
+      hint:"До <b>менших</b> одиниць \u2014 множимо, до <b>більших</b> \u2014 ділимо. Біт\u2194байт \u2014 <b>8</b>, решта щаблів \u2014 <b>1024</b>.",
+      win:"Раунд 3 пройдено \u2014 і це половина роботи \u{1F4AA}",
+      items:[
+        {q:"<code>5 Б</code> \u2014 це скільком бітам?", a:40, u:"б",
+         tip:"Байт \u2192 біт: множимо на 8, а не на 1024.", ok:"5 \u00b7 8 = 40"},
+        {q:"<code>4096 Б</code> \u2014 це скільком кілобайтам?", a:4, u:"кБ",
+         tip:"До більших одиниць \u2014 ділимо. На 1024.", ok:"4096 : 1024 = 4"},
+        {q:"<code>2 кБ</code> \u2014 це скільком байтам?", a:2048, u:"Б",
+         tip:"До менших одиниць \u2014 множимо на 1024. Не на 1000.", ok:"2 \u00b7 1024 = 2048"},
+        {q:"<code>10 кБ</code> \u2014 це скільком <b>бітам</b>?", a:81920, u:"б",
+         tip:"Тут ДВА щаблі: спершу кБ \u2192 Б (\u00b71024), потім Б \u2192 б (\u00b78).", ok:"10 \u00b7 1024 = 10 240 Б \u2192 \u00b7 8 = 81 920"},
+        {q:"<code>3 МБ</code> \u2014 це скільком байтам?", a:3145728, u:"Б",
+         tip:"Іди щаблями: МБ \u2192 кБ \u2192 Б. Обидва множники по 1024.", ok:"3 \u00b7 1024 = 3072 кБ \u2192 \u00b7 1024 = 3 145 728"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 4 — Довжина коду тексту ═══════════
+  function round4(){
+    numRound({
+      task:"Довжина двійкового коду тексту (кодування Windows-1251)",
+      hint:"У Windows-1251 <b>один символ = один байт</b>. Пропуски й знаки \u2014 теж символи.",
+      win:"Раунд 4 пройдено. Прийом «поверхи» працює \u{1F3E0}",
+      items:[
+        {q:"Скільком <b>байтам</b> дорівнює код повідомлення <code>Біт і байт</code>?", a:10, u:"Б",
+         tip:"Порахуй КОЖЕН знак, разом із пропусками. Їх тут два.", ok:"10 символів \u2192 10 Б"},
+        {q:"А скільком <b>бітам</b> дорівнює код того самого повідомлення?", a:80, u:"б",
+         tip:"Байт \u2192 біт: множимо на 8.", ok:"10 \u00b7 8 = 80"},
+        {q:"У рядку 60 символів, на сторінці 40 рядків, у тексті 20 сторінок. Скільком <b>байтам</b> дорівнює код тексту?", a:48000, u:"Б",
+         tip:"«Поверхи»: символ \u2192 рядок \u2192 сторінка \u2192 текст. Кожен крок \u2014 одне множення.",
+         ok:"60 \u00b7 40 = 2400 \u2192 \u00b7 20 = 48 000"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 5 — Розмір BMP ═══════════
+  function round5(){
+    numRound({
+      task:"Розмір файлу BMP \u2014 останній раунд",
+      hint:"У 24-розрядному рисунку піксель \u2014 <b>3 байти</b>. Довжина рядка мусить бути <b>кратна 4</b>: залишок 1 \u2192 +3, залишок 2 \u2192 +2, залишок 3 \u2192 +1.",
+      win:"Усі п\u2019ять раундів пройдено! Тисни «Фінал» \u{1F3C1}",
+      items:[
+        {q:"24-розрядний BMP, ширина <b>25</b> пікселів. Скільком байтам дорівнює <b>один рядок із вирівнюванням</b>?", a:76, u:"Б",
+         tip:"25 \u00b7 3 = 75. Тепер: 75 = 4\u00b718 + 3, отже залишок 3 \u2192 додати 1.",
+         ok:"75 + 1 = 76"},
+        {q:"Той самий рисунок має висоту <b>20</b> пікселів. Який <b>розмір файлу</b> в байтах (заголовок \u2014 54 Б)?", a:1574, u:"Б",
+         tip:"Рядок із вирівнюванням \u2014 76 Б. Помнож на кількість рядків і додай заголовок 54 Б.",
+         ok:"20 \u00b7 76 = 1520 \u2192 + 54 = 1574"}
+      ]
+    });
+  }
+
+  // ═══════════════ Фінал ═══════════════
+  function finale(){
+    dotsEl.querySelectorAll("i").forEach(d=>d.className="done");
+    document.querySelector(".card .actions").style.display="none";
+    const earned = Math.max(0, MAX - mistakes);
+    const localGrade = Math.max(1, Math.round(1+11*earned/MAX));
+    say.innerHTML="Зберігаю твій результат\u2026 \u23f3";
+    stage.innerHTML='<div class="win"><div class="big">\u23f3</div><h2>Рахуємо оцінку\u2026</h2></div>';
+    const finish = (grade, remaining, note) => {
+      const canRetry = remaining > 0;
+      say.innerHTML="Підсумкову роботу ГР 1 завершено! \u{1F389}";
+      stage.innerHTML=`<div class="win">
+        <div class="big">\u{1F3C6}</div>
+        <h2>Готово!</h2>
+        <div class="score">\u2b50 ${earned} / ${MAX} (помилок: ${mistakes})</div>
+        <div class="score" style="color:var(--ok)">Оцінка: ${grade} / 12</div>
+        <p>${note}</p>
+        <p style="opacity:.75;font-size:14px">Цей бал іде у свідоцтво досягнень за <b>ГР 1 \u2014 опрацювання даних</b>.</p>
+        ${canRetry ? '<button class="btn" id="again">Спробувати ще раз \u21ba</button>' : '<button class="btn ghost" id="home">Вийти \u21a9</button>'}
+      </div>`;
+      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; starsEl.textContent=0;
+        document.querySelector(".card .actions").style.display="flex";
+        nextBtn.textContent="Почати \u2192"; nextBtn.disabled=false; paintDots();
+        say.innerHTML="Ще спроба \u2014 цього разу рахуй уважніше \u{1F680}"; stage.innerHTML=""; };
+      const home=$("home"); if(home) home.onclick=()=>{ location.href="../index.html"; };
+    };
+    if(window.submitResult){
+      window.submitResult(earned).then(res=>{
+        if(res && res.ok){
+          finish(res.grade, (res.remaining!=null?res.remaining:0),
+            (res.remaining>0 ? ("Залишилось спроб: "+res.remaining+" \u2014 можеш покращити.") : "Спроби використано. Зараховано найкращий результат."));
+        } else if(res && res.error && /вичерпано/i.test(res.error)){
+          finish(localGrade, 0, "Ти вже використав усі спроби.");
+        } else {
+          finish(localGrade, 0, "Не вдалося зберегти \u2014 покажи результат вчителю.");
+        }
+      }).catch(()=>finish(localGrade,0,"Не вдалося зберегти \u2014 покажи результат вчителю."));
+    } else {
+      finish(localGrade, 0, "Демо-режим.");
+    }
+  }
+
+  // ═══════════════ Керування раундами ═══════════════
+  const rounds=[round1,round2,round3,round4,round5];
+  function lockNext(){ nextBtn.disabled=true; nextBtn.textContent="Виконуй завдання\u2026"; }
+  function done(){ nextBtn.disabled=false; nextBtn.textContent = round<TOTAL_ROUNDS-1 ? "Далі \u2192" : "Фінал \u{1F3C1}"; }
+
+  nextBtn.onclick=()=>{
+    if(round>=TOTAL_ROUNDS){ return; }
+    if(nextBtn.textContent.startsWith("Почати") || nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")){
+      if(nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")) round++;
+      if(round>=TOTAL_ROUNDS){ finale(); return; }
+      paintDots(); rounds[round]();
+    }
+  };
+  paintDots();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Вхід — навчальні ігри</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/theme.js"></script>
+<style>
+  /* тільки те, що є лише на сторінці входу */
+  body{display:grid; place-items:center; padding:var(--s5) var(--s4)}
+  .card{width:100%; max-width:400px; padding:var(--s6) var(--s5); text-align:center}
+  h1{font-size:var(--fs-hero); margin-bottom:var(--s2)}
+  .lede{color:var(--ink-2); font-size:var(--fs-sm); margin-bottom:var(--s5)}
+  .btn{width:100%; margin-top:var(--s3)}
+  .msg{min-height:22px; margin-top:var(--s3); color:var(--bad);
+    font-size:var(--fs-sm); font-weight:650}
+  .msg.ok{color:var(--ok)}
+  /* блок «немає коду?» → демо. Другорядний: головна дія лишається вхід за кодом */
+  .demo-lede{margin:0 0 var(--s4); text-align:left;
+    color:var(--ink-2); font-size:var(--fs-sm); line-height:1.5}
+  .demo-lede b{color:var(--ink); font-weight:650}
+  footer{max-width:400px; margin-top:var(--s4)}
+</style>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" data-head-v1>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="author" content="Процюк О. К.">
+<meta name="description" content="Навчальні ігри з інформатики: учень заходить за особистим кодом, бал 1–12 рахує сервер.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Навчальні ігри">
+<meta property="og:locale" content="uk_UA">
+<meta property="og:title" content="Навчальні ігри — вхід за кодом">
+<meta property="og:description" content="Навчальні ігри з інформатики: учень заходить за особистим кодом, бал 1–12 рахує сервер.">
+<meta property="og:url" content="https://strykers79.github.io/school-games/">
+<meta property="og:image" content="https://strykers79.github.io/school-games/og-cover.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+  <div class="card">
+    <div class="mark" aria-hidden="true">🎮</div>
+    <h1>Навчальні ігри</h1>
+    <p class="lede">Введи код, який дав вчитель — і відкриється твоя гра.</p>
+    <input id="code" class="field" placeholder="КОД" autocomplete="off" maxlength="8" inputmode="latin">
+    <button class="btn" id="go">Увійти →</button>
+    <div id="msg" class="msg"></div>
+
+    <div class="divider"><span>ще немає коду?</span></div>
+    <p class="demo-lede">Тут можна побачити, як усе працює, <b>не витрачаючи жодної спроби</b>:
+      три коротенькі раунди, оцінка за тією самою шкалою — і <b>нічого не зберігається</b>.
+      Ідеально, щоб спокійно розібратися перед справжньою грою.</p>
+    <a class="btn ghost" href="demo.html">Спробувати демо →</a>
+  </div>
+
+  <footer data-sig>
+    © 2025–2026 <b>Процюк О. К.</b> · вчитель інформатики<br>
+    Комунальний заклад «Харківський ліцей № 47 Харківської міської ради»
+  <br><a class="doclink" data-doc href="about.html">Про сайт і дані</a>
+  </footer>
+
+<script src="supabase-config.js"></script>
+<script src="assets/db.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const msg = (t,ok)=>{ const m=$('msg'); m.textContent=t||''; m.className='msg'+(ok?' ok':''); };
+
+async function enter(){
+  const code = $('code').value.trim().toUpperCase();
+  if(code.length < 3){ msg('Введи свій код.'); return; }
+  msg('Перевіряємо…', true);
+  const { data, error } = await sb.rpc('redeem_code', { p_code: code });
+  if(error){ msg('Помилка зʼєднання. Спробуй ще раз.'); return; }
+  if(!data || !data.ok){ msg(data && data.error ? data.error : 'Код не підходить.'); return; }
+  // зберігаємо сесію гри й переходимо у призначену гру
+  sessionStorage.setItem('play', JSON.stringify({
+    code: code,
+    game_slug: data.game_slug,
+    student_name: data.student_name,
+    remaining: data.remaining,
+    max_attempts: data.max_attempts
+  }));
+  msg('Вітаю, '+ (data.student_name||'') +'! Відкриваю гру…', true);
+  location.href = 'games/' + data.game_slug + '.html';
+}
+$('go').onclick = enter;
+$('code').addEventListener('keydown', e=>{ if(e.key==='Enter') enter(); });
+</script>
+</body>
+</html>

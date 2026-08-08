@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Свідомий вибір: інструмент і налаштування під задачу — гра для 7 класу</title>
+<meta name="description" content="Підсумкова робота ГР 3 (7 клас): що дає хмарний сервіс, вибір інструмента для звуку, коли розгалуження потрібне, керування показом презентації, маршрут показу під аудиторію.">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/game.css">
+<script src="../assets/theme.js"></script>
+<script src="../supabase-config.js"></script>
+<script src="../assets/db.js"></script>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml" data-head-v1>
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="logo"><span class="dot"></span>Свідомий вибір</div>
+    <div class="spacer"></div>
+    <div class="dots" id="dots" aria-hidden="true"></div>
+    <div class="stars">⭐ <b id="stars">0</b></div>
+  </div>
+
+  <div class="card">
+    <div class="head">
+      <div class="bit" aria-hidden="true">🧭</div>
+      <div class="bubble" id="say">Це підсумкова робота ГР 3. П'ять раундів про вибір: інструмент і налаштування під задачу.</div>
+    </div>
+    <div class="stage" id="stage"></div>
+    <div class="actions" style="padding:0 18px 22px">
+      <button class="btn" id="next">Почати →</button>
+    </div>
+  </div>
+
+  <footer>Підсумкова робота ГР 3 · «Свідомий вибір» · 7 клас · уроки 5, 8, 12, 13<br><span class="sig" data-sig>© 2025–2026 Процюк О. К. · вчитель інформатики · Харківський ліцей № 47</span><br><a class="doclink" data-doc href="../about.html">Про сайт і дані</a></footer>
+</div>
+<div class="flash" id="flash" aria-hidden="true">⭐</div>
+
+<script>
+(() => {
+  "use strict";
+  const PLAY = (()=>{ try{ return JSON.parse(sessionStorage.getItem('play')||'null'); }catch(e){ return null; } })();
+  if(!PLAY || PLAY.game_slug !== 'svidomyi-vybir-7'){ location.replace('../index.html'); return; }
+  (function(){ var s0=document.getElementById('say'); if(s0) s0.innerHTML=
+    'Привіт, <b>'+(PLAY.student_name||'\u0434\u0440\u0443\u0436\u0435')+'</b>! Це <b>підсумкова робота ГР 3</b> \u2014 усвідомлене користування технологіями. '
+    +'П\u2019ять раундів: хмарні сервіси, вибір інструмента для звуку, розгалуження в презентації, керування показом і маршрут під аудиторію. '
+    +'⚠️ Робота за <b>три теми</b> семестру, але тут <b>немає означень і обчислень</b> \u2014 є <b>рішення</b>. '
+    +'Кожна помилкова спроба знімає зірочку. Спроб лишилось: <b>'+(PLAY.remaining!=null?PLAY.remaining:'?')+'</b>.'; })();
+
+  const $ = id => document.getElementById(id);
+  const stage=$("stage"), say=$("say"), nextBtn=$("next"), starsEl=$("stars"), dotsEl=$("dots");
+  let stars=0, round=0, mistakes=0;
+  const TOTAL_ROUNDS=5;
+  const MAX=26; // 4 + 6 + 6 + 4 + 6
+
+  for(let i=0;i<TOTAL_ROUNDS;i++){const d=document.createElement("i"); dotsEl.appendChild(d);}
+  const paintDots=()=>{[...dotsEl.children].forEach((d,i)=>{d.className = i<round?"done":(i===round?"on":"");});};
+
+  const addStar = (n=1) => {
+    stars+=n; starsEl.textContent=stars;
+    const f=$("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
+  };
+  const bit = html => { say.innerHTML=html; };
+  const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
+
+  // ── Раунд «розклади по папках» ──
+  function sortRound(cfg){
+    bit(cfg.hint);
+    let sel=null, left=cfg.items.length;
+    stage.innerHTML=`<p class="task">${cfg.task}</p>
+      <div class="pool" id="pool"></div>
+      <div class="targets" id="targets"></div>`;
+    const pool=$("pool"), targets=$("targets");
+    shuffle(cfg.items.slice()).forEach(it=>{
+      const b=document.createElement("button"); b.className="tile"; b.style.minWidth="230px";
+      b.innerHTML=`<span class="ic">${it.ic}</span>${it.n}`;
+      b.onclick=()=>{ if(b.classList.contains("gone"))return;
+        [...pool.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); targets.classList.add("armed");
+        sel=it; sel.el=b;
+        bit(`Обрано: <b>${it.n}</b>. ${cfg.pick}`); };
+      pool.appendChild(b);
+    });
+    const counts={}; cfg.folders.forEach(f=>counts[f.name]=0);
+    cfg.folders.forEach(f=>{
+      const d=document.createElement("div"); d.className="folder"; d.tabIndex=0; d.setAttribute("role","button");
+      d.innerHTML=`<div class="fic">${f.ic}</div><div class="fname">${f.name}</div><div class="cnt">0</div>`;
+      const act=()=>{
+        if(!sel){ bit("Спочатку торкнись <b>картки</b>, потім папки \u{1F642}"); d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300); return; }
+        if(sel.f===f.name){
+          sel.el.classList.add("gone"); counts[f.name]++; d.querySelector(".cnt").textContent=counts[f.name];
+          d.classList.add("hit"); setTimeout(()=>d.classList.remove("hit"),300);
+          addStar(); left--; sel=null; targets.classList.remove("armed");
+          if(left===0){ bit(cfg.win); done(); } else bit("Правильно! \u{1F44D} Далі?");
+        } else {
+          d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300);
+          mistakes++; bit(`Подумай ще: <b>${sel.n}</b> \u2014 точно сюди?`);
+        }
+      };
+      d.onclick=act; d.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();act();}};
+      targets.appendChild(d);
+    });
+    lockNext();
+  }
+
+  // ── Раунд «познач правильні» ──
+  function pickRound(cfg){
+    bit(cfg.hint);
+    let found=0; const total=cfg.items.filter(x=>x.ok).length;
+    stage.innerHTML=`<p class="task">${cfg.task}</p><div class="pool" id="pool"></div>`;
+    const pool=$("pool");
+    shuffle(cfg.items.slice()).forEach(it=>{
+      const b=document.createElement("button"); b.className="tile"; b.style.minWidth="250px";
+      // ⚠️ Іконка НЕ показує правильність: у всіх плиток однаковий порожній
+      //    квадратик. Галочка з'являється лише після правильного вибору.
+      //    it.ic у даних лишено, але свідомо НЕ рендериться — інакше
+      //    учень набирав би повний бал, клікаючи по ✅ й не читаючи тексту.
+      b.innerHTML=`<span class="pbox" aria-hidden="true">\u2713</span>${it.n}`;
+      b.onclick=()=>{
+        if(b.dataset.done)return;
+        if(it.ok){ b.classList.add("ok"); b.dataset.done=1; addStar(); found++;
+          bit("Так, правильно \u2705"); if(found===total){ bit(cfg.win); done(); } }
+        else { const bx=b.querySelector(".pbox"); b.classList.add("err");
+          if(bx) bx.textContent="\u2715";
+          setTimeout(()=>{ b.classList.remove("err"); if(bx) bx.textContent="\u2713"; },900);
+          mistakes++; bit(`Ні \u2014 ${it.s}.`); }
+      };
+      pool.appendChild(b);
+    });
+    lockNext();
+  }
+
+  // ═══════════ РАУНД 1 — Хмарні сервіси (урок 5) ═══════════
+  function round1(){
+    pickRound({
+      task:"Познач ЧОТИРИ речі, які справді дає хмарний сервіс \u2601",
+      hint:"Правильних \u2014 <b>чотири</b>. Три інші \u2014 те, чого хмара НЕ робить. Читай уважно.",
+      win:"Раунд 1 пройдено. Ти знаєш, за що хмара, а за що ні \u2601",
+      items:[
+        {n:"Доступ до файлів із будь-якого пристрою, де є твій акаунт", ok:true},
+        {n:"Синхронізація: змінив на телефоні \u2014 змінилося й на ноутбуці", ok:true},
+        {n:"Не треба встановлювати програму \u2014 працює в браузері", ok:true},
+        {n:"Кілька людей можуть працювати з одним документом", ok:true},
+        {n:"Файли зберігаються тільки на твоєму комп\u2019ютері", ok:false,
+         s:"навпаки: вони на <b>сервері постачальника</b>. Саме тому й доступні з інших пристроїв"},
+        {n:"Працює без Інтернету так само добре", ok:false,
+         s:"⚠️ без Інтернету доступ <b>обмежений</b>. Це головна ціна хмари"},
+        {n:"Місце в хмарі безмежне й завжди безкоштовне", ok:false,
+         s:"безкоштовний обсяг <b>обмежений</b> \u2014 далі за місце платять"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 2 — Інструмент для звуку (урок 8) ═══════════
+  function round2(){
+    sortRound({
+      task:"Чим це зробити зі звуком? \u{1F3A7}",
+      hint:"Спершу торкнись <b>картки</b> із задачею, потім \u2014 інструмента. Правило: бери <b>найпростіший інструмент із достатніх</b>.",
+      pick:"Найпростіший достатній інструмент \u2014 який?",
+      win:"Раунд 2 пройдено. Ти не запускаєш редактор там, де досить сайту \u{1F3AF}",
+      folders:[
+        {name:"Онлайн-сервіс", ic:"\u{1F310}"},
+        {name:"Редактор доріжок", ic:"\u{1F39B}"}
+      ],
+      items:[
+        {n:"Вирізати фрагмент із середини пісні", ic:"\u2702", f:"Онлайн-сервіс"},
+        {n:"Склеїти чотири записи один за одним", ic:"\u{1F517}", f:"Онлайн-сервіс"},
+        {n:"Обрізати тишу на початку й у кінці запису", ic:"\u2704", f:"Онлайн-сервіс"},
+        {n:"Накласти свій голос ПОВЕРХ фонової музики", ic:"\u{1F399}", f:"Редактор доріжок"},
+        {n:"Зробити музику тихішою там, де говорить голос", ic:"\u{1F508}", f:"Редактор доріжок"},
+        {n:"Прибрати шум із записаного голосу", ic:"\u{1F32C}", f:"Редактор доріжок"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 3 — Коли розгалуження потрібне (урок 12) ═══════════
+  function round3(){
+    sortRound({
+      task:"Чи потрібне тут розгалуження (меню й посилання)? \u{1F500}",
+      hint:"Головне питання: <b>а що, якщо глядач захоче подивитися інакше?</b> Немає такого питання \u2014 немає й розгалуження.",
+      pick:"Розгалуження тут потрібне чи зайве?",
+      win:"Раунд 3 пройдено. Це найважливіший раунд роботи \u{1F31F}",
+      folders:[
+        {name:"Потрібне", ic:"\u2705"},
+        {name:"Зайве",    ic:"\u{1F6AB}"}
+      ],
+      items:[
+        {n:"Довідник для шкільної бібліотеки: відкривають самі, без тебе", ic:"\u{1F4D6}", f:"Потрібне"},
+        {n:"Презентація-тест зі слайдами «Правильно» і «Помилка»", ic:"\u2753", f:"Потрібне"},
+        {n:"Презентація для самостійного вивчення теми", ic:"\u{1F393}", f:"Потрібне"},
+        {n:"Твій виступ на 5 хвилин перед класом за планом", ic:"\u{1F5E3}", f:"Зайве"},
+        {n:"Розповідь «Один день із життя козака»: від ранку до вечора", ic:"\u{1F305}", f:"Зайве"},
+        {n:"Посилання «щоб було» \u2014 натискати ти його не плануєш", ic:"\u{1F9F9}", f:"Зайве"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 4 — Керування показом (урок 13) ═══════════
+  function round4(){
+    pickRound({
+      task:"Познач ЧОТИРИ правильні твердження про керування показом \u25B6",
+      hint:"Правильних \u2014 <b>чотири</b>. Три інші звучать переконливо, але <b>неправильні</b>.",
+      win:"Раунд 4 пройдено. Показом керуєш ти, а не випадкове клацання \u25B6",
+      items:[
+        {n:"Кнопка «повернення» веде туди, ЗВІДКИ ти прийшов", ok:true},
+        {n:"Кнопки дій \u2014 це графічні примітиви, тобто фігури", ok:true},
+        {n:"Користувацький показ НЕ видаляє слайдів із файлу", ok:true},
+        {n:"Заборонив зміну слайдів клацанням \u2014 на кожному слайді потрібна кнопка", ok:true},
+        {n:"Кнопка «перейти на початок» веде на попередній слайд", ok:false,
+         s:"вона веде на <b>перший</b> слайд. На попередній веде «повернутися назад»"},
+        {n:"Щоб показати різні набори слайдів, треба зробити копії файлу", ok:false,
+         s:"⚠️ ні: <b>один файл</b> і кілька <b>користувацьких показів</b>. Слайди нікуди не зникають"},
+        {n:"Гіперпосилання й кнопки працюють і в режимі редагування", ok:false,
+         s:"вони працюють у режимі <b>Показ слайдів</b> \u2014 натисни F5"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 5 — Маршрут під аудиторію (уроки 12–13) ═══════════
+  function round5(){
+    sortRound({
+      task:"Одна презентація \u2014 три ситуації. Кому цей маршрут? \u{1F5FA}",
+      hint:"Останній раунд. Питання не «як зробити маршрут», а <b>кому</b> він. Дивись на час і на те, чи будеш ти поруч.",
+      pick:"Для якої ситуації це рішення?",
+      win:"Усі п\u2019ять раундів пройдено! Тисни «Фінал» \u{1F3C1}",
+      folders:[
+        {name:"Виступ 2 хвилини", ic:"\u23F1"},
+        {name:"Дивляться самі",   ic:"\u{1F440}"},
+        {name:"Захист перед комісією", ic:"\u{1F396}"}
+      ],
+      items:[
+        {n:"Три-чотири найголовніші слайди, решта \u2014 поза маршрутом", ic:"\u2702", f:"Виступ 2 хвилини"},
+        {n:"Без меню й кнопок: я говорю за планом", ic:"\u{1F5E3}", f:"Виступ 2 хвилини"},
+        {n:"Слайд-меню й «\u27F5 до змісту» на кожному розділі", ic:"\u{1F9ED}", f:"Дивляться самі"},
+        {n:"Підказки на слайдах, бо мене поруч немає", ic:"\u{1F4A1}", f:"Дивляться самі"},
+        {n:"Слайд із витратами й числами результату", ic:"\u{1F4CA}", f:"Захист перед комісією"},
+        {n:"Повний набір слайдів разом зі слайдом «Джерела»", ic:"\u{1F4DA}", f:"Захист перед комісією"}
+      ]
+    });
+  }
+
+  // ═══════════════ Фінал ═══════════════
+  function finale(){
+    dotsEl.querySelectorAll("i").forEach(d=>d.className="done");
+    document.querySelector(".card .actions").style.display="none";
+    const earned = Math.max(0, MAX - mistakes);
+    const localGrade = Math.max(1, Math.round(1+11*earned/MAX));
+    say.innerHTML="Зберігаю твій результат\u2026 \u23f3";
+    stage.innerHTML='<div class="win"><div class="big">\u23f3</div><h2>Рахуємо оцінку\u2026</h2></div>';
+    const finish = (grade, remaining, note) => {
+      const canRetry = remaining > 0;
+      say.innerHTML="Підсумкову роботу ГР 3 завершено! \u{1F389}";
+      stage.innerHTML=`<div class="win">
+        <div class="big">\u{1F3C6}</div>
+        <h2>Готово!</h2>
+        <div class="score">\u2b50 ${earned} / ${MAX} (помилок: ${mistakes})</div>
+        <div class="score" style="color:var(--ok)">Оцінка: ${grade} / 12</div>
+        <p>${note}</p>
+        <p style="opacity:.75;font-size:14px">Цей бал іде у свідоцтво досягнень за <b>ГР 3 \u2014 усвідомлене користування технологіями</b>.</p>
+        ${canRetry ? '<button class="btn" id="again">Спробувати ще раз \u21ba</button>' : '<button class="btn ghost" id="home">Вийти \u21a9</button>'}
+      </div>`;
+      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; starsEl.textContent=0;
+        document.querySelector(".card .actions").style.display="flex";
+        nextBtn.textContent="Почати \u2192"; nextBtn.disabled=false; paintDots();
+        say.innerHTML="Ще спроба \u2014 цього разу читай уважніше \u{1F680}"; stage.innerHTML=""; };
+      const home=$("home"); if(home) home.onclick=()=>{ location.href="../index.html"; };
+    };
+    if(window.submitResult){
+      window.submitResult(earned).then(res=>{
+        if(res && res.ok){
+          finish(res.grade, (res.remaining!=null?res.remaining:0),
+            (res.remaining>0 ? ("Залишилось спроб: "+res.remaining+" \u2014 можеш покращити.") : "Спроби використано. Зараховано найкращий результат."));
+        } else if(res && res.error && /вичерпано/i.test(res.error)){
+          finish(localGrade, 0, "Ти вже використав усі спроби.");
+        } else {
+          finish(localGrade, 0, "Не вдалося зберегти \u2014 покажи результат вчителю.");
+        }
+      }).catch(()=>finish(localGrade,0,"Не вдалося зберегти \u2014 покажи результат вчителю."));
+    } else {
+      finish(localGrade, 0, "Демо-режим.");
+    }
+  }
+
+  // ═══════════════ Керування раундами ═══════════════
+  const rounds=[round1,round2,round3,round4,round5];
+  function lockNext(){ nextBtn.disabled=true; nextBtn.textContent="Виконуй завдання\u2026"; }
+  function done(){ nextBtn.disabled=false; nextBtn.textContent = round<TOTAL_ROUNDS-1 ? "Далі \u2192" : "Фінал \u{1F3C1}"; }
+
+  nextBtn.onclick=()=>{
+    if(round>=TOTAL_ROUNDS){ return; }
+    if(nextBtn.textContent.startsWith("Почати") || nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")){
+      if(nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")) round++;
+      if(round>=TOTAL_ROUNDS){ finale(); return; }
+      paintDots(); rounds[round]();
+    }
+  };
+  paintDots();
+})();
+</script>
+</body>
+</html>

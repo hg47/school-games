@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Алгоритми та програми: розгалуження й логіка — гра для 8 класу</title>
+<meta name="description" content="Підсумкова робота ГР 2 та ГР 3 (8 клас): яка форма розгалуження потрібна, or чи and, обчислення за моделлю, коли варто писати програму, логіка у фільтрах і пошуку.">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/game.css">
+<script src="../assets/theme.js"></script>
+<script src="../supabase-config.js"></script>
+<script src="../assets/db.js"></script>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml" data-head-v1>
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="logo"><span class="dot"></span>Алгоритми та програми</div>
+    <div class="spacer"></div>
+    <div class="dots" id="dots" aria-hidden="true"></div>
+    <div class="stars">⭐ <b id="stars">0</b></div>
+  </div>
+
+  <div class="card">
+    <div class="head">
+      <div class="bit" aria-hidden="true">🔀</div>
+      <div class="bubble" id="say">Це підсумкова робота ГР 2 та ГР 3. П'ять раундів: розгалуження, логічні операції та свідомі рішення.</div>
+    </div>
+    <div class="stage" id="stage"></div>
+    <div class="actions" style="padding:0 18px 22px">
+      <button class="btn" id="next">Почати →</button>
+    </div>
+  </div>
+
+  <footer>Підсумкова робота ГР 2 та ГР 3 · «Алгоритми та програми» · 8 клас · Тема 3, уроки 17–23<br><span class="sig" data-sig>© 2025–2026 Процюк О. К. · вчитель інформатики · Харківський ліцей № 47</span><br><a class="doclink" data-doc href="../about.html">Про сайт і дані</a></footer>
+</div>
+<div class="flash" id="flash" aria-hidden="true">⭐</div>
+
+<script>
+(() => {
+  "use strict";
+  const PLAY = (()=>{ try{ return JSON.parse(sessionStorage.getItem('play')||'null'); }catch(e){ return null; } })();
+  if(!PLAY || PLAY.game_slug !== 'alhorytmy-8'){ location.replace('../index.html'); return; }
+  (function(){ var s0=document.getElementById('say'); if(s0) s0.innerHTML=
+    'Привіт, <b>'+(PLAY.student_name||'друже')+'</b>! Це <b>підсумкова робота ГР 2 та ГР 3</b> за Темою 3. '
+    +'П’ять раундів: яка форма розгалуження потрібна, <code>or</code> чи <code>and</code>, чотири невеликі обчислення, '
+    +'коли варто писати програму і логіка у фільтрах та пошуку. '
+    +'⚠️ <b>Означень «за підручником» тут немає</b> — є <b>рішення</b> й <b>чотири задачі з числом</b>. '
+    +'Кожна помилкова спроба знімає зірочку. Спроб лишилось: <b>'+(PLAY.remaining!=null?PLAY.remaining:'?')+'</b>.'; })();
+
+  const $ = id => document.getElementById(id);
+  const stage=$("stage"), say=$("say"), nextBtn=$("next"), starsEl=$("stars"), dotsEl=$("dots");
+  let stars=0, round=0, mistakes=0;
+  const TOTAL_ROUNDS=5;
+  const MAX=26; // 6 + 6 + 4 + 6 + 4
+
+  for(let i=0;i<TOTAL_ROUNDS;i++){const d=document.createElement("i"); dotsEl.appendChild(d);}
+  const paintDots=()=>{[...dotsEl.children].forEach((d,i)=>{d.className = i<round?"done":(i===round?"on":"");});};
+
+  const addStar = (n=1) => {
+    stars+=n; starsEl.textContent=stars;
+    const f=$("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
+  };
+  const bit = html => { say.innerHTML=html; };
+  const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
+
+  // ── Раунд «розклади по папках» ──
+  function sortRound(cfg){
+    bit(cfg.hint);
+    let sel=null, left=cfg.items.length;
+    stage.innerHTML=`<p class="task">${cfg.task}</p>
+      <div class="pool" id="pool"></div>
+      <div class="targets" id="targets"></div>`;
+    const pool=$("pool"), targets=$("targets");
+    shuffle(cfg.items.slice()).forEach(it=>{
+      const b=document.createElement("button"); b.className="tile"; b.style.minWidth="250px";
+      b.innerHTML=`<span class="ic">${it.ic}</span>${it.n}`;
+      b.onclick=()=>{ if(b.classList.contains("gone"))return;
+        [...pool.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); targets.classList.add("armed");
+        sel=it; sel.el=b;
+        bit(`Обрано: <b>${it.n}</b>. ${cfg.pick}`); };
+      pool.appendChild(b);
+    });
+    const counts={}; cfg.folders.forEach(f=>counts[f.name]=0);
+    cfg.folders.forEach(f=>{
+      const d=document.createElement("div"); d.className="folder"; d.tabIndex=0; d.setAttribute("role","button");
+      d.innerHTML=`<div class="fic">${f.ic}</div><div class="fname">${f.name}</div><div class="cnt">0</div>`;
+      const act=()=>{
+        if(!sel){ bit("Спочатку торкнись <b>картки</b>, потім папки \u{1F642}"); d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300); return; }
+        if(sel.f===f.name){
+          sel.el.classList.add("gone"); counts[f.name]++; d.querySelector(".cnt").textContent=counts[f.name];
+          d.classList.add("hit"); setTimeout(()=>d.classList.remove("hit"),300);
+          addStar(); left--; sel=null; targets.classList.remove("armed");
+          if(left===0){ bit(cfg.win); done(); } else bit("Правильно! \u{1F44D} Далі?");
+        } else {
+          d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300);
+          mistakes++; bit(`Подумай ще: <b>${sel.n}</b> — точно сюди?`);
+        }
+      };
+      d.onclick=act; d.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();act();}};
+      targets.appendChild(d);
+    });
+    lockNext();
+  }
+
+  // ── Раунд «познач правильні» ──
+  function pickRound(cfg){
+    bit(cfg.hint);
+    let found=0; const total=cfg.items.filter(x=>x.ok).length;
+    stage.innerHTML=`<p class="task">${cfg.task}</p><div class="pool" id="pool"></div>`;
+    const pool=$("pool");
+    shuffle(cfg.items.slice()).forEach(it=>{
+      const b=document.createElement("button"); b.className="tile"; b.style.minWidth="260px";
+      // ⚠️ Іконка НЕ показує правильність: у всіх плиток однаковий порожній
+      //    квадратик. Галочка з'являється лише після правильного вибору.
+      //    it.ic у даних лишено, але свідомо НЕ рендериться — інакше
+      //    учень набирав би повний бал, клікаючи по ✅ й не читаючи тексту.
+      b.innerHTML=`<span class="pbox" aria-hidden="true">\u2713</span>${it.n}`;
+      b.onclick=()=>{
+        if(b.dataset.done)return;
+        if(it.ok){ b.classList.add("ok"); b.dataset.done=1; addStar(); found++;
+          bit("Так, правильно ✅"); if(found===total){ bit(cfg.win); done(); } }
+        else { const bx=b.querySelector(".pbox"); b.classList.add("err");
+          if(bx) bx.textContent="\u2715";
+          setTimeout(()=>{ b.classList.remove("err"); if(bx) bx.textContent="\u2713"; },900);
+          mistakes++; bit(`Ні — ${it.s}.`); }
+      };
+      pool.appendChild(b);
+    });
+    lockNext();
+  }
+
+  // ── Раунд із числовою відповіддю (завдання одне за одним) ──
+  function numRound(cfg){
+    bit(cfg.hint);
+    let i=0;
+    const render=()=>{
+      const it=cfg.items[i];
+      stage.innerHTML=`<p class="task">${cfg.task}</p>
+        <div class="qbox">
+          <div class="qnum">Завдання ${i+1} з ${cfg.items.length}</div>
+          <div class="qtext">${it.q}</div>
+          <div class="qrow">
+            <input class="num-in" id="ans" type="text" inputmode="text" autocomplete="off"
+                   placeholder="?" aria-label="Твоя відповідь">
+            ${it.u ? `<span class="unit">${it.u}</span>` : ``}
+            <button class="btn" id="chk">Перевірити</button>
+          </div>
+          <div class="verdict" id="vd">Уведи число й натисни «Перевірити» (або Enter).</div>
+        </div>`;
+      const inp=$("ans"), vd=$("vd"), chk=$("chk");
+      try{ inp.focus(); }catch(e){}
+      const check=()=>{
+        const raw=(inp.value||"").replace(/[\s ]/g,"").replace(",",".").replace("−","-");
+        if(raw===""){ vd.textContent="Спочатку введи число \u{1F642}"; return; }
+        const val=Number(raw);
+        if(!isFinite(val)){ vd.textContent="Це не схоже на число. Спробуй ще."; return; }
+        if(Math.abs(val-it.a) < 1e-6){
+          addStar();
+          vd.innerHTML='<b style="color:var(--ok)">Правильно ✅</b>' + (it.ok?(" "+it.ok):"");
+          inp.disabled=true; chk.disabled=true;
+          i++;
+          if(i>=cfg.items.length){ bit(cfg.win); done(); }
+          else setTimeout(render, 1100);
+        } else {
+          mistakes++;
+          vd.innerHTML='<b style="color:var(--bad)">Ні.</b> ' + it.tip;
+          try{ inp.select(); }catch(e){}
+        }
+      };
+      chk.onclick=check;
+      inp.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); check(); } };
+    };
+    render(); lockNext();
+  }
+
+  // ═══════════ РАУНД 1 — ГР 2 · Яка форма розгалуження (уроки 18–21) ═══════════
+  function round1(){
+    sortRound({
+      task:"Яка форма розгалуження потрібна для цієї задачі? \u{1F500}",
+      hint:"Спершу торкнись <b>картки</b>, потім форми. Питання одне: <b>скільки різних варіантів</b> має результат?",
+      pick:"Скільки варіантів у результату — один, два чи три й більше?",
+      win:"Раунд 1 пройдено. Ти обираєш форму за кількістю варіантів \u{1F500}",
+      folders:[
+        {name:"if — коротка",         ic:"⤴"},
+        {name:"if…else — повна",  ic:"⇄"},
+        {name:"if…elif…else",     ic:"\u{1FA9C}"}
+      ],
+      items:[
+        {n:"Решта від’ємна — попередити. Інакше не робити нічого", ic:"⚠", f:"if — коротка"},
+        {n:"Поле порожнє — повідомити й вийти з обробника", ic:"\u{1F6E1}", f:"if — коротка"},
+        {n:"Вистачило грошей — зелений напис, не вистачило — червоний", ic:"\u{1F7E9}", f:"if…else — повна"},
+        {n:"Трикутник існує або не існує", ic:"\u{1F53A}", f:"if…else — повна"},
+        {n:"Бал → рівень: високий, достатній, середній, початковий", ic:"\u{1F4CA}", f:"if…elif…else"},
+        {n:"Вік → квиток: безкоштовний, дитячий, повний, пільговий", ic:"\u{1F39F}", f:"if…elif…else"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 2 — ГР 2 · or чи and (уроки 22–23) ═══════════
+  function round2(){
+    sortRound({
+      task:"Яку логічну операцію потрібно поставити в умову? \u{1F9E9}",
+      hint:"Правило з уроку 23: <b>дві окремі ділянки — or</b>, <b>один проміжок — and</b>. І перевірка: прочитай умову вголос як речення про <b>одне</b> число.",
+      pick:"or чи and?",
+      win:"Раунд 2 пройдено. Це головне вміння теми \u{1F31F}",
+      folders:[
+        {name:"or — диз’юнкція", ic:"\u{1F53C}"},
+        {name:"and — кон’юнкція", ic:"\u{1F53D}"}
+      ],
+      items:[
+        {n:"Бал неприпустимий: менший за 1 <b>або</b> більший за 12", ic:"\u{1F6AB}", f:"or — диз’юнкція"},
+        {n:"Температура небезпечна: нижче −20 <b>або</b> вище +35", ic:"\u{1F321}", f:"or — диз’юнкція"},
+        {n:"Хоч одне з трьох полів залишили порожнім", ic:"\u{1F573}", f:"or — диз’юнкція"},
+        {n:"Вода підходить для купання: від 20 до 28 °C", ic:"\u{1F30A}", f:"and — кон’юнкція"},
+        {n:"Трикутник існує: кожна сторона менша за суму двох інших", ic:"\u{1F53A}", f:"and — кон’юнкція"},
+        {n:"Пароль підходить за довжиною: від 8 до 20 символів", ic:"\u{1F511}", f:"and — кон’юнкція"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 3 — ГР 2 · Порахуй за моделлю (уроки 13, 17, 21, 23) ═══════════
+  function round3(){
+    numRound({
+      task:"Порахуй і впиши число \u{1F9EE}",
+      hint:"Чотири задачі одна за одною. Дробові пиши через <b>кому або точку</b> — приймається і так, і так. Мінус — звичайний.",
+      win:"Раунд 3 пройдено. Модель важливіша за код \u{1F9EE}",
+      items:[
+        {
+          q:"Проєкт рахує так: <code>if x < -3 or x > 5: y = 2*x - 12</code>, а <code>else: y = 7 - 8*x</code>.<br>Уводимо <b>x = −3</b>. Яке <b>y</b> покаже проєкт?",
+          a:31, u:"",
+          ok:"−3 <b>не менше</b> за −3, тому працює друга формула.",
+          tip:"Уважно: чи істинна умова <code>x < -3</code> при x = −3? Межа належить <b>другій</b> гілці."
+        },
+        {
+          q:"Мама дала Марійці <b>200 грн</b>. Треба купити <b>400 г</b> печива (кілограм — <b>150 грн</b>), <b>2</b> пакети молока по <b>32 грн</b> і хліб за <b>25 грн</b>.<br>Скільки <b>решти</b> залишиться?",
+          a:51, u:"грн",
+          ok:"0,4·150 + 2·32 + 25 = 149. Решта — 51 грн.",
+          tip:"400 г — це <b>0,4</b> кілограма, а не 400. Порахуй витрати окремо, потім відніми."
+        },
+        {
+          q:"У проєкті <code>elif</code>-ланцюжок із <b>чотирьох</b> гілок: 10–12, 7–9, 4–6, 1–3.<br>Скільки тестових наборів потрібно, щоб перевірити <b>кожну гілку</b> й <b>кожну межу</b>?",
+          a:7, u:"наборів",
+          ok:"Чотири гілки плюс три межі: 12, 10, 9, 7, 5, 3, 1.",
+          tip:"Порахуй: по одному на кожну гілку — це чотири. А тепер додай набори <b>на межах</b> між гілками."
+        },
+        {
+          q:"Депозит: <b>7 %</b> прибутку за <b>пів року</b>, і прибуток <b>додається до вкладу</b>.<br>Поклали <b>1000 грн</b>. Скільки грошей буде на рахунку <b>через рік</b>?",
+          a:1144.9, u:"грн",
+          ok:"1000·1,07·1,07 = 1144,9. Це 14,49 %, а не 14 %.",
+          tip:"За рік нарахують <b>двічі</b>, і другий раз — уже на збільшену суму. Множники <b>перемножуються</b>."
+        }
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 4 — ГР 3 · Коли варто писати програму (урок 17) ═══════════
+  function round4(){
+    sortRound({
+      task:"Тут варто написати проєкт — чи швидше без програми? \u{1F914}",
+      hint:"Програму варто писати, коли обчислення <b>повторюється багато разів</b>, дані <b>змінюються</b>, а формула — <b>та сама</b>. Один раз порахувати швидше руками.",
+      pick:"Варто писати проєкт чи ні?",
+      win:"Раунд 4 пройдено. Уміти <b>не</b> писати програму — теж уміння \u{1F3AF}",
+      folders:[
+        {name:"Варто написати проєкт", ic:"\u{1F4BB}"},
+        {name:"Швидше без програми",   ic:"✏"}
+      ],
+      items:[
+        {n:"Щомісяця рахувати оплату за електроенергію для 30 квартир", ic:"\u{1F4A1}", f:"Варто написати проєкт"},
+        {n:"Після кожної роботи рахувати відсоток виконаного для всього класу", ic:"\u{1F4C8}", f:"Варто написати проєкт"},
+        {n:"Перевірити 40 наборів із зошита: чи існує трикутник", ic:"\u{1F53A}", f:"Варто написати проєкт"},
+        {n:"Один раз перевести 5 кілограмів у грами", ic:"⚖", f:"Швидше без програми"},
+        {n:"Порахувати площу однієї кімнати, щоб купити лінолеум", ic:"\u{1F4D0}", f:"Швидше без програми"},
+        {n:"Скласти список покупок на вечерю", ic:"\u{1F6D2}", f:"Швидше без програми"}
+      ]
+    });
+  }
+
+  // ═══════════ РАУНД 5 — ГР 3 · Логіка у фільтрах і пошуку (урок 22) ═══════════
+  function round5(){
+    pickRound({
+      task:"Познач ЧОТИРИ правильні твердження про логіку в пошуку й фільтрах \u{1F50D}",
+      hint:"Останній раунд. Правильних — <b>чотири</b>. Три інші звучать переконливо, але <b>неправильні</b>.",
+      win:"Усі п’ять раундів пройдено! Тисни «Фінал» \u{1F3C1}",
+      items:[
+        {n:"Галочки в межах ОДНОГО фільтра з’єднані через or — результатів стає більше", ok:true},
+        {n:"РІЗНІ фільтри з’єднані через and — результатів стає менше", ok:true},
+        {n:"«Нічого не знайдено» найчастіше значить, що умова занадто сувора", ok:true},
+        {n:"У пошуку OR потрібно писати ВЕЛИКИМИ літерами", ok:true},
+        {n:"Чим більше галочок поставиш, тим більше знайдеш", ok:false,
+         s:"⚠️ залежить, <b>де</b> галочка: у межах одного фільтра — більше, а <b>новий</b> фільтр — менше"},
+        {n:"Мінус перед словом у пошуку розширює пошук", ok:false,
+         s:"навпаки: <code>-слово</code> — це <b>not</b>, воно <b>виключає</b> сторінки з цим словом"},
+        {n:"Галочка «Запам’ятати мене» на чужому комп’ютері безпечна, якщо закрити вкладку", ok:false,
+         s:"⚠️ ні: ця логічна змінна лишається <b>True</b> і <b>після тебе</b> — разом із доступом до акаунта"}
+      ]
+    });
+  }
+
+  // ═══════════════ Фінал ═══════════════
+  function finale(){
+    dotsEl.querySelectorAll("i").forEach(d=>d.className="done");
+    document.querySelector(".card .actions").style.display="none";
+    const earned = Math.max(0, MAX - mistakes);
+    const localGrade = Math.max(1, Math.round(1+11*earned/MAX));
+    say.innerHTML="Зберігаю твій результат… ⏳";
+    stage.innerHTML='<div class="win"><div class="big">⏳</div><h2>Рахуємо оцінку…</h2></div>';
+    const finish = (grade, remaining, note) => {
+      const canRetry = remaining > 0;
+      say.innerHTML="Гру підсумкової роботи завершено! \u{1F389}";
+      stage.innerHTML=`<div class="win">
+        <div class="big">\u{1F3C6}</div>
+        <h2>Готово!</h2>
+        <div class="score">⭐ ${earned} / ${MAX} (помилок: ${mistakes})</div>
+        <div class="score" style="color:var(--ok)">Оцінка за гру: ${grade} / 12</div>
+        <p>${note}</p>
+        <p style="opacity:.75;font-size:14px">Це <b>перша</b> частина роботи. Друга — твій <b>власний проєкт</b> за одинадцятьма вимогами.
+        Підсумковий бал за <b>ГР 2 та ГР 3</b> — це <b>середнє двох частин</b>, округлене вгору.</p>
+        ${canRetry ? '<button class="btn" id="again">Спробувати ще раз ↺</button>' : '<button class="btn ghost" id="home">Вийти ↩</button>'}
+      </div>`;
+      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; starsEl.textContent=0;
+        document.querySelector(".card .actions").style.display="flex";
+        nextBtn.textContent="Почати →"; nextBtn.disabled=false; paintDots();
+        say.innerHTML="Ще спроба — цього разу читай умови уважніше \u{1F680}"; stage.innerHTML=""; };
+      const home=$("home"); if(home) home.onclick=()=>{ location.href="../index.html"; };
+    };
+    if(window.submitResult){
+      window.submitResult(earned).then(res=>{
+        if(res && res.ok){
+          finish(res.grade, (res.remaining!=null?res.remaining:0),
+            (res.remaining>0 ? ("Залишилось спроб: "+res.remaining+" — можеш покращити.") : "Спроби використано. Зараховано найкращий результат."));
+        } else if(res && res.error && /вичерпано/i.test(res.error)){
+          finish(localGrade, 0, "Ти вже використав усі спроби.");
+        } else {
+          finish(localGrade, 0, "Не вдалося зберегти — покажи результат вчителю.");
+        }
+      }).catch(()=>finish(localGrade,0,"Не вдалося зберегти — покажи результат вчителю."));
+    } else {
+      finish(localGrade, 0, "Демо-режим.");
+    }
+  }
+
+  // ═══════════════ Керування раундами ═══════════════
+  const rounds=[round1,round2,round3,round4,round5];
+  function lockNext(){ nextBtn.disabled=true; nextBtn.textContent="Виконуй завдання…"; }
+  function done(){ nextBtn.disabled=false; nextBtn.textContent = round<TOTAL_ROUNDS-1 ? "Далі →" : "Фінал \u{1F3C1}"; }
+
+  nextBtn.onclick=()=>{
+    if(round>=TOTAL_ROUNDS){ return; }
+    if(nextBtn.textContent.startsWith("Почати") || nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")){
+      if(nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")) round++;
+      if(round>=TOTAL_ROUNDS){ finale(); return; }
+      paintDots(); rounds[round]();
+    }
+  };
+  paintDots();
+})();
+</script>
+</body>
+</html>
