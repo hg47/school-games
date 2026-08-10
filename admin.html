@@ -62,6 +62,10 @@
     border:1px solid var(--line); border-radius:var(--r-sm); background:var(--surface-2)}
   .checks label{display:flex; gap:var(--s2); align-items:center; padding:4px 6px; font-size:var(--fs-sm)}
   small.hint{color:var(--ink-3)}
+  /* ⚠️ Робоча панель — без анімації появи карток. Частина карток тут лежить у
+     прихованій секції (показується після входу), і початковий opacity:0 із
+     спільного правила міг би лишити їх невидимими. Тому вимикаємо саме тут. */
+  .card{opacity:1 !important; animation:none !important}
 </style>
 </head>
 <body data-techbg>

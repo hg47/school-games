@@ -129,6 +129,21 @@ button,input,select,textarea{font-family:inherit; font-size:inherit; color:inher
   background:var(--card-bg); border:var(--card-border); border-radius:var(--r-lg);
   box-shadow:var(--card-shadow); overflow:hidden;
 }
+/* Поява карток після завантаження — на всіх сторінках сайту: легкий виїзд угору,
+   по черзі. ⚠️ Початковий opacity:0 — ЛИШЕ коли анімації дозволені (інакше при
+   вимкнених анімаціях картки лишилися б невидимими). «Лесенку» затримок
+   обмежуємо: на сторінках із багатьма картками остання інакше з'являлася б надто
+   пізно. Домашню сторінку не чіпаємо — там власне, точніше налаштоване правило
+   (.cards .card) вищої за це специфічності. */
+@media (prefers-reduced-motion:no-preference){
+  .card{opacity:0; animation:cardIn .5s cubic-bezier(.22,.61,.36,1) both}
+  .card:nth-child(1){animation-delay:.04s}
+  .card:nth-child(2){animation-delay:.11s}
+  .card:nth-child(3){animation-delay:.18s}
+  .card:nth-child(4){animation-delay:.25s}
+  .card:nth-child(n+5){animation-delay:.3s}
+}
+@keyframes cardIn{from{opacity:0; transform:translateY(16px)} to{opacity:1; transform:none}}
 
 /* ─── КНОПКИ ──────────────────────────────────────────────────────────── */
 .btn{

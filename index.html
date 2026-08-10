@@ -30,10 +30,10 @@
      Лише раз за сесію (скрипт нижче ставить .skip на повторних заходах — без
      блимання, бо виконується синхронно ще до першого малювання). CSS-анімація
      сама прибирає екран навіть без JS. Кому вимкнено анімації — не показуємо.
-     Тримається ~1.15 с, потім згасає 0.45 с. Стиль — обої з мов + логотип. */
+     Тримається ~2 с, потім згасає 0.45 с. Стиль — обої з мов + логотип. */
   #splash{position:fixed; inset:0; z-index:9999; background:var(--bg);
     display:grid; place-items:center; overflow:hidden;
-    animation:splashOut .45s ease 1.15s forwards}
+    animation:splashOut .45s ease 2s forwards}
   #splash.skip{display:none}
   #splash .swall{position:absolute; inset:-15%; display:flex; flex-wrap:wrap;
     align-content:center; justify-content:center; gap:.5em 1.2em;
