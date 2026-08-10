@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Навчальні презентації за класами — інформатика</title>
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/slides.css">
+<script src="assets/theme.js"></script>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" data-head-v1>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="author" content="Процюк О. К.">
+<meta name="description" content="Навчальні презентації з інформатики за класами: слайди проведених уроків — повторити тему або надолужити пропущене. Без логіна.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Навчальні презентації">
+<meta property="og:locale" content="uk_UA">
+<meta property="og:title" content="Навчальні презентації за класами — інформатика">
+<meta property="og:description" content="Слайди проведених уроків інформатики за класами: повторити тему або надолужити пропущений урок.">
+<meta property="og:url" content="https://strykers79.github.io/school-games/materials.html">
+<meta property="og:image" content="https://strykers79.github.io/school-games/og-cover.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+
+<div class="wrap">
+  <a class="backlink" href="index.html">← на головну</a>
+
+  <div class="hero">
+    <h1>Навчальні презентації</h1>
+    <p class="lede">Слайди уроків, які <b>вже проведені</b> — за класами й розділами.
+      Можна спокійно передивитися тему ще раз або надолужити пропущений урок.
+      Код не потрібен.
+      <br>Кожен урок є і <b>одним файлом PDF</b>: його можна зберегти на телефон
+      і читати без інтернету.</p>
+  </div>
+
+  <div class="chips" id="chips" hidden></div>
+  <div id="list"></div>
+  <div class="empty" id="empty" hidden></div>
+
+  <footer data-sig>
+    © 2025–2026 <b>Процюк О. К.</b> · вчитель інформатики<br>
+    Комунальний заклад «Харківський ліцей № 47 Харківської міської ради»
+    <br><a class="doclink" data-doc href="about.html">Про сайт і дані</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const KEY = "materials-class";
+  const esc = s => String(s).replace(/[&<>"]/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  const FORMS = {
+    slide: ["слайд", "слайди", "слайдів"],
+    lesson: ["урок", "уроки", "уроків"]
+  };
+  const plural = (n, kind) => {
+    const f = FORMS[kind], t = n % 100, o = n % 10;
+    if (t >= 11 && t <= 14) return f[2];
+    if (o === 1) return f[0];
+    if (o >= 2 && o <= 4) return f[1];
+    return f[2];
+  };
+
+  fetch("materials/manifest.json", { cache: "no-cache" })
+    .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+    .then(man => {
+      const lessons = man.lessons || [];
+      if (!lessons.length) throw new Error("порожньо");
+      build(lessons);
+    })
+    .catch(() => {
+      $("empty").innerHTML = "Тут поки що <b>нічого немає</b>: презентації з’являються " +
+        "після того, як урок проведено.<br><br>" +
+        '<a class="btn" href="index.html">На головну →</a>';
+      $("empty").hidden = false;
+    });
+
+  function build(lessons) {
+    // ⚠️ Порядок класів — ЧИСЛОМ, не рядком: інакше «10-А» стає перед «5-А»,
+    // а «9 клас» опиняється в кінці списку.
+    const num = c => { const m = c.match(/\d+/); return m ? +m[0] : 99; };
+    const classes = [...new Set(lessons.map(e => e.cls))]
+      .sort((a, b) => num(a) - num(b) || a.localeCompare(b, "uk"));
+    let pick = null;
+    try { pick = localStorage.getItem(KEY); } catch (e) {}
+    if (!classes.includes(pick)) pick = classes.length === 1 ? classes[0] : null;
+
+    const chips = $("chips");
+    chips.hidden = classes.length < 2;
+    const mk = (label, val) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.textContent = label;
+      b.dataset.val = val || "";
+      b.onclick = () => {
+        pick = val;
+        try { localStorage.setItem(KEY, val || ""); } catch (e) {}
+        draw();
+      };
+      chips.appendChild(b);
+    };
+    mk("усі класи", null);
+    classes.forEach(c => mk(c, c));
+
+    const card = e => {
+      const url = "slides.html?m=" + encodeURIComponent(e.slug);
+      return '<article class="lesson">' +
+        '<span class="lnum">урок ' + esc(e.lesson) + "</span>" +
+        '<div class="ltitle">' + esc(e.title) + "</div>" +
+        '<div class="lmeta">' + e.slides + " " + plural(e.slides, "slide") +
+        (e.skipped ? " · частину слайдів не виклано" : "") + "</div>" +
+        '<div class="lacts"><a class="btn" href="' + url + '">Дивитися →</a>' +
+        (e.pdf ? '<a class="btn ghost" href="materials/' + encodeURIComponent(e.slug) +
+          '/deck.pdf" title="Зберегти урок одним файлом">PDF</a>' : "") +
+        "</div></article>";
+    };
+
+    function draw() {
+      [...chips.children].forEach(b =>
+        b.setAttribute("aria-pressed", (b.dataset.val || null) === pick ? "true" : "false"));
+
+      const show = pick ? lessons.filter(e => e.cls === pick) : lessons;
+
+      // manifest уже відсортований (клас → розділ → номер уроку), тому досить
+      // послідовного проходу: ключ змінився — почався новий клас або новий розділ
+      const tree = [];
+      for (const e of show) {
+        let c = tree[tree.length - 1];
+        if (!c || c.cls !== e.cls) { c = { cls: e.cls, units: [] }; tree.push(c); }
+        let u = c.units[c.units.length - 1];
+        if (!u || u.unit !== e.unit) { u = { unit: e.unit, items: [] }; c.units.push(u); }
+        u.items.push(e);
+      }
+
+      const html = [];
+      for (const c of tree) {
+        html.push('<section class="group"><div class="grouptop"><h2>' + esc(c.cls) +
+          '</h2><button class="toggleall" type="button">розгорнути всі</button></div>');
+        for (const u of c.units) {
+          html.push('<details class="unitbox"><summary>' +
+            '<span class="chev" aria-hidden="true">▸</span>' +
+            '<span class="unitname">' + esc(u.unit) + "</span>" +
+            '<span class="cnt">' + u.items.length + " " +
+            plural(u.items.length, "lesson") + "</span></summary>" +
+            '<div class="lessons">' + u.items.map(card).join("") + "</div></details>");
+        }
+        html.push("</section>");
+      }
+      $("list").innerHTML = html.join("");
+
+      // «розгорнути всі» — по кнопці на кожен клас окремо
+      for (const btn of document.querySelectorAll(".toggleall")) {
+        btn.onclick = () => {
+          const boxes = [...btn.closest(".group").querySelectorAll(".unitbox")];
+          const openAll = boxes.some(d => !d.open);
+          boxes.forEach(d => { d.open = openAll; });
+          btn.textContent = openAll ? "згорнути всі" : "розгорнути всі";
+        };
+      }
+    }
+
+    draw();
+  }
+})();
+</script>
+</body>
+</html>

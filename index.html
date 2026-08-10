@@ -7,10 +7,16 @@
 <link rel="stylesheet" href="assets/site.css">
 <script src="assets/theme.js"></script>
 <style>
-  /* тільки те, що є лише на сторінці входу */
-  body{display:grid; place-items:center; padding:var(--s5) var(--s4)}
-  .card{width:100%; max-width:400px; padding:var(--s6) var(--s5); text-align:center}
-  h1{font-size:var(--fs-hero); margin-bottom:var(--s2)}
+  /* тільки те, що є лише на головній */
+  body{display:flex; flex-direction:column; align-items:center; justify-content:center;
+    min-height:100vh; padding:var(--s5) var(--s4)}
+  /* ⭐ Дві рівноправні картки: ігри (вхід за кодом) і презентації (вільно).
+     На вузькому екрані стають одна під одною самі — flex-wrap. */
+  .cards{display:flex; flex-wrap:wrap; justify-content:center; align-items:stretch;
+    gap:var(--s4); width:100%; max-width:840px}
+  .card{flex:1 1 360px; max-width:400px; padding:var(--s6) var(--s5);
+    text-align:center; display:flex; flex-direction:column}
+  h1,.card h2{font-size:var(--fs-hero); margin-bottom:var(--s2)}
   .lede{color:var(--ink-2); font-size:var(--fs-sm); margin-bottom:var(--s5)}
   .btn{width:100%; margin-top:var(--s3)}
   .msg{min-height:22px; margin-top:var(--s3); color:var(--bad);
@@ -20,17 +26,20 @@
   .demo-lede{margin:0 0 var(--s4); text-align:left;
     color:var(--ink-2); font-size:var(--fs-sm); line-height:1.5}
   .demo-lede b{color:var(--ink); font-weight:650}
-  footer{max-width:400px; margin-top:var(--s4)}
+  /* ⚠️ Кнопка картки — завжди внизу, щоб у двох карток різної висоти
+     головні дії стояли на одній лінії. */
+  .card .spacer{flex:1}
+  footer{max-width:840px; margin-top:var(--s5)}
 </style>
 <link rel="icon" href="favicon.svg" type="image/svg+xml" data-head-v1>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="author" content="Процюк О. К.">
-<meta name="description" content="Навчальні ігри з інформатики: учень заходить за особистим кодом, бал 1–12 рахує сервер.">
+<meta name="description" content="Навчальні ігри з інформатики (вхід за особистим кодом, бал 1–12 рахує сервер) і навчальні презентації за класами — слайди проведених уроків, без коду.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Навчальні ігри">
 <meta property="og:locale" content="uk_UA">
-<meta property="og:title" content="Навчальні ігри — вхід за кодом">
-<meta property="og:description" content="Навчальні ігри з інформатики: учень заходить за особистим кодом, бал 1–12 рахує сервер.">
+<meta property="og:title" content="Навчальні ігри та презентації — інформатика">
+<meta property="og:description" content="Ігри з входом за особистим кодом (бал 1–12 рахує сервер) і навчальні презентації за класами — слайди проведених уроків, без коду.">
 <meta property="og:url" content="https://strykers79.github.io/school-games/">
 <meta property="og:image" content="https://strykers79.github.io/school-games/og-cover.jpg">
 <meta property="og:image:type" content="image/jpeg">
@@ -39,6 +48,8 @@
 <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
+ <div class="cards">
+
   <div class="card">
     <div class="mark" aria-hidden="true">🎮</div>
     <h1>Навчальні ігри</h1>
@@ -51,8 +62,23 @@
     <p class="demo-lede">Тут можна побачити, як усе працює, <b>не витрачаючи жодної спроби</b>:
       три коротенькі раунди, оцінка за тією самою шкалою — і <b>нічого не зберігається</b>.
       Ідеально, щоб спокійно розібратися перед справжньою грою.</p>
+    <div class="spacer"></div>
     <a class="btn ghost" href="demo.html">Спробувати демо →</a>
   </div>
+
+  <div class="card">
+    <div class="mark" aria-hidden="true">📚</div>
+    <h2>Навчальні презентації</h2>
+    <p class="lede">Слайди проведених уроків — за класами. <b>Код не потрібен.</b></p>
+    <p class="demo-lede">Можна передивитися тему ще раз або надолужити пропущений урок:
+      відкрив клас, обрав розділ — і листаєш слайди просто в браузері.
+      <br><br>Кожен урок є і <b>одним файлом PDF</b> — його можна зберегти на телефон
+      і читати без інтернету.</p>
+    <div class="spacer"></div>
+    <a class="btn" href="materials.html">Обрати клас →</a>
+  </div>
+
+ </div>
 
   <footer data-sig>
     © 2025–2026 <b>Процюк О. К.</b> · вчитель інформатики<br>

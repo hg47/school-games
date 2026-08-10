@@ -1,0 +1,124 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   МАТЕРІАЛИ УРОКІВ · каталог (materials.html) + листалка слайдів (slides.html)
+
+   Підключати ПІСЛЯ site.css — тут лише те, чого немає в спільних токенах:
+     <link rel="stylesheet" href="assets/site.css">
+     <link rel="stylesheet" href="assets/slides.css">
+
+   ⚠️ Жодного кольору «числом»: усе через токени site.css, тому світла й темна
+      теми працюють самі, без другої копії палітри.
+   ⚠️ Жодного зовнішнього посилання — ні шрифтів, ні іконок. Правило сайту.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── спільне ───────────────────────────────────────────────────────────── */
+.wrap{width:100%; max-width:1000px; margin:0 auto; padding:var(--s5) var(--s4) var(--s6)}
+.hero{margin-bottom:var(--s5)}
+.hero h1{font-size:var(--fs-hero); background:var(--title-grad);
+  -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:var(--s2)}
+.hero .lede{color:var(--ink-2); font-size:var(--fs-sm); line-height:1.55; max-width:62ch}
+.backlink{display:inline-flex; align-items:center; gap:var(--s1); color:var(--ink-2);
+  font-size:var(--fs-sm); font-weight:650; text-decoration:none; margin-bottom:var(--s3)}
+.backlink:hover{color:var(--accent)}
+
+/* ── каталог: фільтр класів ────────────────────────────────────────────── */
+.chips{display:flex; flex-wrap:wrap; gap:var(--s2); margin-bottom:var(--s5)}
+.chip{font:inherit; font-size:var(--fs-sm); font-weight:650; cursor:pointer;
+  padding:7px var(--s3); border-radius:var(--r-full); color:var(--ink-2);
+  background:var(--surface); border:1px solid var(--line)}
+.chip:hover{border-color:var(--line-2); color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--accent-soft); color:var(--accent);
+  border-color:var(--accent)}
+
+/* ── каталог: клас → розділи, що розгортаються ──────────────────────────
+   ⭐ Розділ — це <details>/<summary>, а не свій скрипт: працює з клавіатури,
+   переживає вимкнений JS і не вимагає жодної бібліотеки. Правило сайту. */
+.group{margin-bottom:var(--s5)}
+.grouptop{display:flex; align-items:baseline; gap:var(--s3); margin-bottom:var(--s3)}
+.group h2{font-size:var(--fs-h2)}
+.toggleall{margin-left:auto; font:inherit; font-size:var(--fs-xs); font-weight:650;
+  color:var(--ink-3); background:none; border:0; cursor:pointer; padding:0}
+.toggleall:hover{color:var(--accent)}
+
+.unitbox{background:var(--card-bg); border:var(--card-border);
+  border-radius:var(--r-md); margin-bottom:var(--s2); box-shadow:var(--sh1)}
+.unitbox>summary{display:flex; align-items:center; gap:var(--s3); cursor:pointer;
+  padding:var(--s3) var(--s4); font-size:var(--fs-body); font-weight:650;
+  list-style:none; border-radius:var(--r-md)}
+.unitbox>summary::-webkit-details-marker{display:none}   /* стара Safari */
+.unitbox>summary:hover{color:var(--accent)}
+.unitbox>summary:focus-visible{outline:2px solid var(--brand); outline-offset:-2px}
+.unitname{flex:1; min-width:0}
+.cnt{flex:0 0 auto; color:var(--ink-3); font-size:var(--fs-xs); font-weight:650}
+/* ⚠️ inline-block обов'язково: до звичайного inline-елемента transform
+   не застосовується, і стрілка не поверталася б при розгортанні. */
+.chev{flex:0 0 auto; display:inline-block; color:var(--ink-3);
+  transition:transform .18s ease}
+.unitbox[open]>summary{border-bottom:1px solid var(--line);
+  border-radius:var(--r-md) var(--r-md) 0 0}
+.unitbox[open] .chev{transform:rotate(90deg)}
+.unitbox>.lessons{padding:var(--s4)}
+
+.lessons{display:grid; gap:var(--s3);
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.lesson{display:flex; flex-direction:column; gap:var(--s2); padding:var(--s4);
+  background:var(--card-bg); border:var(--card-border); border-radius:var(--r-md);
+  box-shadow:var(--sh1)}
+.lesson:hover{border-color:var(--line-2); box-shadow:var(--sh2)}
+.lnum{align-self:flex-start; font-family:var(--mono); font-size:var(--fs-xs);
+  font-weight:700; color:var(--accent); background:var(--accent-soft);
+  border-radius:var(--r-sm); padding:3px var(--s2)}
+.ltitle{font-size:var(--fs-body); font-weight:650; line-height:1.35}
+.lmeta{color:var(--ink-3); font-size:var(--fs-xs); margin-top:auto}
+.lacts{display:flex; gap:var(--s2); margin-top:var(--s2)}
+.lacts .btn{flex:1; padding:9px var(--s3); font-size:var(--fs-sm)}
+.lacts .btn.ghost{flex:0 0 auto}
+
+/* ── листалка ──────────────────────────────────────────────────────────── */
+body.viewer{display:flex; flex-direction:column; min-height:100vh; padding:0}
+.vtop{display:flex; align-items:center; gap:var(--s3); padding:var(--s3) var(--s4);
+  border-bottom:1px solid var(--line); background:var(--surface)}
+.vtop .home{flex:0 0 auto; color:var(--ink-2); text-decoration:none; font-weight:700}
+.vtop .home:hover{color:var(--accent)}
+.vtitle{flex:1; min-width:0; font-size:var(--fs-sm); font-weight:650;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.vtitle span{color:var(--ink-3); font-weight:600}
+.counter{flex:0 0 auto; font-family:var(--mono); font-size:var(--fs-sm);
+  font-weight:700; color:var(--ink-2)}
+.vacts{flex:0 0 auto; display:flex; gap:var(--s2)}
+.iconbtn{font:inherit; font-size:var(--fs-xs); font-weight:650; cursor:pointer;
+  padding:6px var(--s3); border-radius:var(--r-sm); color:var(--ink-2);
+  background:var(--surface-2); border:1px solid var(--line); text-decoration:none}
+.iconbtn:hover{color:var(--ink); border-color:var(--line-2)}
+
+.stage{flex:1; display:grid; place-items:center; padding:var(--s4);
+  position:relative; min-height:0}
+/* ⚠️ Слайд ніколи не масштабується вгору: 1600px — це його справжня ширина,
+   розтягувати далі означає мило замість тексту. */
+.stage img{max-width:min(100%,1600px); max-height:calc(100vh - 190px);
+  width:auto; height:auto; border-radius:var(--r-md); box-shadow:var(--sh3);
+  background:#fff}
+.zone{position:absolute; top:0; bottom:0; width:22%; cursor:pointer; border:0;
+  background:transparent; -webkit-tap-highlight-color:transparent}
+.zone:focus-visible{outline:2px solid var(--brand); outline-offset:-4px}
+.zone.prev{left:0} .zone.next{right:0}
+
+.vbot{display:flex; align-items:center; justify-content:center; gap:var(--s3);
+  padding:var(--s3) var(--s4) var(--s4)}
+.dots{display:flex; flex-wrap:wrap; gap:5px; justify-content:center; max-width:520px}
+.dot{width:9px; height:9px; padding:0; border:0; border-radius:var(--r-full);
+  background:var(--line-2); cursor:pointer}
+.dot[aria-current="true"]{background:var(--accent); box-shadow:var(--glow-on)}
+.hint{color:var(--ink-3); font-size:var(--fs-xs); text-align:center;
+  padding:0 var(--s4) var(--s4)}
+
+.empty{max-width:520px; margin:var(--s7) auto; text-align:center; color:var(--ink-2);
+  font-size:var(--fs-sm); line-height:1.6}
+.empty b{color:var(--ink)}
+
+@media (max-width:560px){
+  .vtop{flex-wrap:wrap; gap:var(--s2)}
+  .vtitle{order:3; flex-basis:100%}
+  .stage{padding:var(--s2)}
+  .stage img{max-height:calc(100vh - 210px)}
+  .hint{display:none}          /* на телефоні підказка про стрілки ні до чого */
+}
