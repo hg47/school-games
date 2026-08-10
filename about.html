@@ -9,7 +9,20 @@
 <style>
   /* сторінка суцільного тексту — своя типографіка, ігрових стилів тут не треба */
   body{padding:var(--s5) var(--s4) var(--s7)}
-  .doc{max-width:760px; margin:0 auto}
+  .doc{max-width:760px; margin:0 auto; position:relative; z-index:1}
+  /* Обої-фон із назв мов і фреймворків — доречно на сторінці вчителя
+     інформатики. Дуже бліді, під нахилом, ПІД картками (їхній фон непрозорий),
+     тож текст лишається читабельним. Колір — з теми, тому працює в обох. */
+  .techbg{position:fixed; inset:-15%; z-index:0; overflow:hidden;
+    pointer-events:none; user-select:none; -webkit-user-select:none;
+    display:flex; flex-wrap:wrap; align-content:center; justify-content:center;
+    gap:.55em 1.3em; transform:rotate(-8deg); font-weight:800; letter-spacing:.01em}
+  .techbg span{color:var(--ink); opacity:.05; line-height:1; white-space:nowrap}
+  .techbg .a{font-size:clamp(30px,6.5vw,66px); opacity:.06}
+  .techbg .b{font-size:clamp(20px,4vw,44px); opacity:.045}
+  .techbg .c{font-size:clamp(15px,2.8vw,30px); opacity:.035}
+  .techbg .hot{color:var(--accent); opacity:.11}
+  @media (prefers-reduced-motion:no-preference){.techbg{will-change:auto}}
   .doc .card{padding:var(--s5) var(--s4); margin-bottom:var(--s4)}
   @media (min-width:560px){.doc .card{padding:var(--s6)}}
   .back{display:inline-flex; align-items:center; gap:6px; margin-bottom:var(--s4);
@@ -67,6 +80,25 @@
 <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
+<div class="techbg" aria-hidden="true">
+  <span class="a hot">C#</span><span class="b">JavaScript</span><span class="a hot">.NET</span>
+  <span class="c">HTML</span><span class="b">Kotlin</span><span class="a hot">Python</span>
+  <span class="c">CSS</span><span class="b">TypeScript</span><span class="a hot">C++</span>
+  <span class="b">Java</span><span class="c">SQL</span><span class="a">Rust</span>
+  <span class="c">Swift</span><span class="b">ASP.NET</span><span class="c">Go</span>
+  <span class="b">React</span><span class="a">Blazor</span><span class="c">PHP</span>
+  <span class="b">Vue</span><span class="c">Ruby</span><span class="a">.NET MAUI</span>
+  <span class="c">Angular</span><span class="b">Node.js</span><span class="c">Docker</span>
+  <span class="a">Django</span><span class="c">Git</span><span class="b">Flask</span>
+  <span class="c">Linux</span><span class="b">PostgreSQL</span><span class="c">JSON</span>
+  <span class="a">Unity</span><span class="c">Bash</span><span class="b">Kubernetes</span>
+  <span class="c">REST</span><span class="b">WPF</span><span class="c">Redis</span>
+  <span class="a">TensorFlow</span><span class="c">MongoDB</span><span class="b">Azure</span>
+  <span class="c">NumPy</span><span class="b">pandas</span><span class="c">GraphQL</span>
+  <span class="a">Assembly</span><span class="c">Pascal</span><span class="b">Scratch</span>
+  <span class="c">Xamarin</span><span class="a">C#</span><span class="b">Python</span>
+  <span class="c">.NET</span><span class="b">C++</span><span class="a">JavaScript</span>
+</div>
 <div class="doc">
   <a class="back" href="index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2 3 11h2.2v9h4.3v-5.6h5V20h4.3v-9H21z"/></svg> На головну</a>
 
