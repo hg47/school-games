@@ -187,3 +187,23 @@ body{display:flex; align-items:flex-start; justify-content:center;
 .flash{position:fixed; inset:0; z-index:5; pointer-events:none;
   display:grid; place-items:center; font-size:90px; opacity:0}
 .flash.go{animation:flash .7s}
+
+/* ─── ПОЯВА ЕКРАНІВ ГРИ ────────────────────────────────────────────────
+   Кожен раунд .stage перемальовується, тож анімація грає на нових елементах.
+   ⚠️ fill:backwards, а НЕ forwards/both: інакше анімована непрозорість
+   «залипла» б і перебила клас .tile.gone (сховати відповідену плитку) — і
+   плитки лишалися б на екрані. Backwards відпускає елемент після появи, і
+   класи гри (.gone/.ok/.err/.sel) працюють як завжди. Плитки анімуємо лише
+   через opacity: у них власні transform-стани (hover, .gone). */
+@media (prefers-reduced-motion:no-preference){
+  .stage .task, .stage .prompt, .stage .qbox, .stage .qrow,
+  .stage .intro, .stage .win, .stage .verdict{animation:rise .4s ease backwards}
+  .tile, .folder, .bin, .op{animation:gfade .38s ease backwards}
+  .tile:nth-child(1),.folder:nth-child(1),.bin:nth-child(1),.op:nth-child(1){animation-delay:.03s}
+  .tile:nth-child(2),.folder:nth-child(2),.bin:nth-child(2),.op:nth-child(2){animation-delay:.08s}
+  .tile:nth-child(3),.folder:nth-child(3),.bin:nth-child(3),.op:nth-child(3){animation-delay:.13s}
+  .tile:nth-child(4),.folder:nth-child(4),.bin:nth-child(4),.op:nth-child(4){animation-delay:.18s}
+  .tile:nth-child(5),.folder:nth-child(5),.bin:nth-child(5),.op:nth-child(5){animation-delay:.22s}
+  .tile:nth-child(n+6),.folder:nth-child(n+6),.bin:nth-child(n+6),.op:nth-child(n+6){animation-delay:.25s}
+}
+@keyframes gfade{from{opacity:0} to{opacity:1}}
