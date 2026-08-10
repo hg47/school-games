@@ -52,7 +52,9 @@
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
-  const KEY = "materials-class";
+  // ⭐ Ключ спільний зі сторінкою ШІ-помічників: учень обирає свій клас один раз,
+  // і це діє на обох сторінках.
+  const KEY = "school-class";
   const esc = s => String(s).replace(/[&<>"]/g, c =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 

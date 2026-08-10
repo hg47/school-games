@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ШІ-помічники за класами — інформатика</title>
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/slides.css">
+<script src="assets/theme.js"></script>
+<style>
+  /* тільки те, що є лише на цій сторінці */
+  .warn{padding:var(--s4); border-radius:var(--r-md); margin-bottom:var(--s5);
+    background:var(--accent-soft); border:1px solid var(--accent);
+    font-size:var(--fs-sm); line-height:1.55}
+  .warn h2{font-size:var(--fs-h2); margin-bottom:var(--s2); color:var(--accent)}
+  .warn ul{margin:var(--s2) 0 0; padding-left:1.2em}
+  .warn li{margin-bottom:var(--s2)}
+  .warn b{color:var(--ink)}
+  .gem .who{align-self:flex-start; font-family:var(--mono); font-size:var(--fs-xs);
+    font-weight:700; color:var(--accent); background:var(--accent-soft);
+    border-radius:var(--r-sm); padding:3px var(--s2)}
+  .gem .gtitle{font-size:var(--fs-body); font-weight:650; line-height:1.35}
+  .gem .gdesc{color:var(--ink-2); font-size:var(--fs-sm); line-height:1.5}
+  /* ⚠️ кнопка притиснута донизу, щоб у карток з описами різної довжини
+     «Відкрити» стояло на одній лінії */
+  .gem .lacts{margin-top:auto}
+  .note{color:var(--ink-3); font-size:var(--fs-xs); line-height:1.6;
+    margin-bottom:var(--s5)}
+</style>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" data-head-v1>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="author" content="Процюк О. К.">
+<meta name="description" content="Навчальні ШІ-помічники з інформатики за класами: тренажери на основі Gemini. Відкриваються на сайті Google, потрібен вхід у Google-акаунт.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ШІ-помічники">
+<meta property="og:locale" content="uk_UA">
+<meta property="og:title" content="ШІ-помічники за класами — інформатика">
+<meta property="og:description" content="Тренажери на основі Gemini за класами й темами. Відкриваються на сайті Google, потрібен вхід у Google-акаунт.">
+<meta property="og:url" content="https://hg47.github.io/school-games/gems.html">
+<meta property="og:image" content="https://hg47.github.io/school-games/og-cover.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+
+<div class="wrap">
+  <a class="backlink" href="index.html">← на головну</a>
+
+  <div class="hero">
+    <h1>ШІ-помічники</h1>
+    <p class="lede">Це <b>тренажери</b>: помічник ставить питання, підказує, коли застряг,
+      і пояснює те саме іншими словами. ⚠️ Вони працюють <b>не на цьому сайті</b>, а на
+      сайті Google — кнопка відкриває нове вікно.</p>
+  </div>
+
+  <div class="warn">
+    <h2>Прочитай, перш ніж відкривати</h2>
+    <ul>
+      <li>⛔ <b>Нічого про себе не пиши.</b> Ні прізвища, ні школи, ні класу, ні адреси,
+        ні телефону, ні пароля. Помічникові це не потрібно, щоб допомогти з темою.</li>
+      <li>⚠️ <b>Помічник помиляється.</b> Він звучить упевнено навіть тоді, коли не правий.
+        Тому кожну відповідь, яка йде в зошит, звіряй із <b>підручником або
+        презентацією уроку</b>.</li>
+      <li>⛔ <b>Це не спосіб «щоб зробило за мене».</b> Домашнє завдання перевіряється на
+        те, чи <b>ти</b> розібрався. Списаний у машини текст видно одразу — і бал за нього
+        не ставиться.</li>
+      <li>⚠️ <b>Потрібен вхід у Google-акаунт.</b> Якщо не пускає або пише, що недоступно —
+        це нормально й <b>не твоя провина</b>: доступ до Gemini відкриває адміністратор
+        шкільного домену. Скажи вчителю, розберемося на уроці.</li>
+      <li>⭐ <b>Усе, що ти там напишеш, іде на сервери Google</b> і працює за
+        <b>їхніми</b> правилами, не за правилами цього сайту. Тому й перше правило —
+        нічого про себе.</li>
+    </ul>
+  </div>
+
+  <div class="chips" id="chips" hidden></div>
+  <div id="list"></div>
+  <div class="empty" id="empty" hidden></div>
+
+  <p class="note">⚠️ Помічники відкриваються в новому вікні на <b>gemini.google.com</b>.
+    Цей сайт нічого туди <b>не передає</b> — ні твого імені, ні класу, ні балів:
+    він про них навіть не знає, бо тут немає входу за кодом.
+    Що саме збирає Google, описано в його власних умовах.
+    <br>Докладніше про дані цього сайту — <a class="doclink" data-doc href="about.html">Про сайт і дані</a>.</p>
+
+  <footer data-sig>
+    © 2025–2026 <b>Процюк О. К.</b> · вчитель інформатики<br>
+    Комунальний заклад «Харківський ліцей № 47 Харківської міської ради»
+    <br><a class="doclink" data-doc href="about.html">Про сайт і дані</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     ПЕРЕЛІК ПОМІЧНИКІВ — єдине місце, яке правиться при додаванні нового.
+
+     Один помічник — один рядок. Поля:
+       cls   — клас РІВНО так, як у каталозі презентацій: "5-А", "6-А",
+               "7-А", "8-А", "9 клас", "10-А". ⚠️ Від цього залежить фільтр.
+       topic — тема (йде в плашку над назвою)
+       title — назва, яку побачить учень
+       desc  — один-два рядки, що він робить
+       url   — посилання «поділитися» з gemini.google.com
+
+     ⛔ Посилання вставляти ТІЛЬКИ копіюванням з адресного рядка. Один
+        неправильний символ = мертве посилання для цілого класу, і зовні це
+        не перевіряється: Google віддає однакову відповідь на будь-яку адресу.
+     ⛔ Не виносити сюди гемів, які містять відповіді до підсумкових робіт.
+     ⭐ Порядок у масиві не має значення — сортується сам: клас, потім тема.
+     ═══════════════════════════════════════════════════════════════════════ */
+  const GEMS = [
+    {
+      cls: "5-А",
+      topic: "Тема 1. Інформаційні процеси та системи",
+      title: "Біт — помічник з Теми 1",
+      desc: "Той самий Біт, що на уроках і в іграх. Питає, підказує й веде " +
+            "маленькими кроками: об’єкти та їх властивості, повідомлення й дані, " +
+            "складові комп’ютера, файли, папки та ярлики.",
+      url: "https://gemini.google.com/gem/1s6xis6ap0oRtcGTn-cXjgoEjqeLaU_8X?usp=sharing"
+    },
+    {
+      cls: "8-А",
+      topic: "Двійкове кодування",
+      title: "Помічник — двійкове кодування",
+      desc: "Байтик веде питаннями й підказками, а не видає готову відповідь. " +
+            "Застряг на переведенні числа — питай його.",
+      url: "https://gemini.google.com/gem/1D0f3ONbQwIO9p6vZN0ltfafhIU0KUtfs?usp=sharing"
+    }
+  ];
+  /* ══════════════════ далі правити не потрібно ══════════════════════════ */
+
+  const $ = id => document.getElementById(id);
+  // ⭐ Ключ спільний із каталогом презентацій: учень обирає свій клас один раз,
+  // і це діє на обох сторінках.
+  const KEY = "school-class";
+  const esc = s => String(s).replace(/[&<>"]/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  const plural = n => {
+    const t = n % 100, o = n % 10;
+    if (t >= 11 && t <= 14) return "помічників";
+    if (o === 1) return "помічник";
+    if (o >= 2 && o <= 4) return "помічники";
+    return "помічників";
+  };
+
+  if (!GEMS.length) {
+    $("empty").innerHTML = "Помічників поки що <b>немає</b> — вони з’являться згодом.<br><br>" +
+      '<a class="btn" href="index.html">На головну →</a>';
+    $("empty").hidden = false;
+    return;
+  }
+
+  // ⚠️ Порядок класів — ЧИСЛОМ, не рядком: інакше «10-А» стає перед «5-А».
+  const num = c => { const m = c.match(/\d+/); return m ? +m[0] : 99; };
+  const byClass = (a, b) => num(a) - num(b) || a.localeCompare(b, "uk");
+
+  const classes = [...new Set(GEMS.map(g => g.cls))].sort(byClass);
+  let pick = null;
+  try { pick = localStorage.getItem(KEY); } catch (e) {}
+  if (!classes.includes(pick)) pick = classes.length === 1 ? classes[0] : null;
+
+  const chips = $("chips");
+  chips.hidden = classes.length < 2;
+  const mk = (label, val) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = label;
+    b.dataset.val = val || "";
+    b.onclick = () => {
+      pick = val;
+      try { localStorage.setItem(KEY, val || ""); } catch (e) {}
+      draw();
+    };
+    chips.appendChild(b);
+  };
+  mk("усі класи", null);
+  classes.forEach(c => mk(c, c));
+
+  const card = g => '<article class="lesson gem">' +
+    '<span class="who">' + esc(g.topic) + "</span>" +
+    '<div class="gtitle">' + esc(g.title) + "</div>" +
+    '<div class="gdesc">' + esc(g.desc) + "</div>" +
+    '<div class="lacts"><a class="btn" target="_blank" rel="noopener noreferrer" href="' +
+    esc(g.url) + '">Відкрити →</a></div></article>';
+
+  function draw() {
+    [...chips.children].forEach(b =>
+      b.setAttribute("aria-pressed", (b.dataset.val || null) === pick ? "true" : "false"));
+
+    const show = (pick ? GEMS.filter(g => g.cls === pick) : GEMS.slice())
+      .sort((a, b) => byClass(a.cls, b.cls) || a.topic.localeCompare(b.topic, "uk"));
+
+    const html = [];
+    let cls = null;
+    for (const g of show) {
+      if (g.cls !== cls) {
+        if (cls !== null) html.push("</div></section>");
+        const n = show.filter(x => x.cls === g.cls).length;
+        html.push('<section class="group"><div class="grouptop"><h2>' + esc(g.cls) +
+          '</h2><span class="cnt">' + n + " " + plural(n) + "</span></div>" +
+          '<div class="lessons">');
+        cls = g.cls;
+      }
+      html.push(card(g));
+    }
+    if (cls !== null) html.push("</div></section>");
+    $("list").innerHTML = html.join("");
+  }
+
+  draw();
+})();
+</script>
+</body>
+</html>

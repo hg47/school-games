@@ -49,6 +49,8 @@
 .unitbox>summary:focus-visible{outline:2px solid var(--brand); outline-offset:-2px}
 .unitname{flex:1; min-width:0}
 .cnt{flex:0 0 auto; color:var(--ink-3); font-size:var(--fs-xs); font-weight:650}
+/* у шапці групи лічильник притискаємо праворуч — там, де в каталозі стоїть кнопка */
+.grouptop .cnt{margin-left:auto}
 /* ⚠️ inline-block обов'язково: до звичайного inline-елемента transform
    не застосовується, і стрілка не поверталася б при розгортанні. */
 .chev{flex:0 0 auto; display:inline-block; color:var(--ink-3);
