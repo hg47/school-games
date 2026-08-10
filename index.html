@@ -16,6 +16,46 @@
     gap:var(--s4); width:100%; max-width:1240px}
   .card{flex:1 1 330px; max-width:400px; padding:var(--s6) var(--s5);
     text-align:center; display:flex; flex-direction:column}
+  /* Поява карток після завантаження: легкий виїзд угору, по черзі.
+     ⚠️ Початковий стан (opacity:0) — ЛИШЕ коли анімації дозволені, інакше
+     при вимкнених анімаціях картки лишилися б невидимими. */
+  @media (prefers-reduced-motion:no-preference){
+    .cards .card{opacity:0; animation:cardIn .55s cubic-bezier(.22,.61,.36,1) forwards}
+    .cards .card:nth-child(1){animation-delay:.06s}
+    .cards .card:nth-child(2){animation-delay:.16s}
+    .cards .card:nth-child(3){animation-delay:.26s}
+  }
+  @keyframes cardIn{from{opacity:0; transform:translateY(18px)} to{opacity:1; transform:none}}
+  /* ── ЕКРАН ЗАВАНТАЖЕННЯ ─────────────────────────────────────────────────
+     Лише раз за сесію (скрипт нижче ставить .skip на повторних заходах — без
+     блимання, бо виконується синхронно ще до першого малювання). CSS-анімація
+     сама прибирає екран навіть без JS. Кому вимкнено анімації — не показуємо.
+     Тримається ~1.15 с, потім згасає 0.45 с. Стиль — обої з мов + логотип. */
+  #splash{position:fixed; inset:0; z-index:9999; background:var(--bg);
+    display:grid; place-items:center; overflow:hidden;
+    animation:splashOut .45s ease 1.15s forwards}
+  #splash.skip{display:none}
+  #splash .swall{position:absolute; inset:-15%; display:flex; flex-wrap:wrap;
+    align-content:center; justify-content:center; gap:.5em 1.2em;
+    transform:rotate(-8deg); font-weight:800; pointer-events:none}
+  #splash .swall span{color:var(--ink); opacity:.07; line-height:1;
+    white-space:nowrap; font-size:clamp(22px,5vw,52px)}
+  #splash .swall .hot{color:var(--accent); opacity:.16}
+  #splash .sinner{position:relative; z-index:1; display:grid; gap:16px;
+    justify-items:center; text-align:center; padding:var(--s4)}
+  #splash .smark{width:78px; height:78px; border-radius:22px; display:grid;
+    place-items:center; background:var(--mark-grad);
+    box-shadow:0 12px 32px -10px rgba(255,95,138,.6)}
+  #splash .smark svg{width:44px; height:44px; fill:#fff}
+  #splash .stitle{font-size:var(--fs-hero); font-weight:750; color:var(--ink)}
+  #splash .ssub{font-size:var(--fs-sm); color:var(--ink-2); letter-spacing:.02em}
+  #splash .sbar{width:180px; height:4px; border-radius:99px; background:var(--line);
+    overflow:hidden; margin-top:var(--s2)}
+  #splash .sbar i{display:block; height:100%; width:38%; border-radius:99px;
+    background:var(--btn-grad); animation:sload 1.05s ease-in-out infinite}
+  @keyframes sload{0%{transform:translateX(-130%)} 100%{transform:translateX(360%)}}
+  @keyframes splashOut{to{opacity:0; visibility:hidden}}
+  @media (prefers-reduced-motion:reduce){#splash{display:none}}
   h1,.card h2{font-size:var(--fs-hero); margin-bottom:var(--s2)}
   .lede{color:var(--ink-2); font-size:var(--fs-sm); margin-bottom:var(--s5)}
   .btn{width:100%; margin-top:var(--s3)}
@@ -54,6 +94,39 @@
 <meta name="twitter:card" content="summary_large_image">
 </head>
 <body data-techbg>
+<div id="splash">
+  <div class="swall" aria-hidden="true">
+    <span class="hot">C#</span><span>JavaScript</span><span class="hot">.NET</span>
+    <span>TypeScript</span><span class="hot">Python</span><span>Kotlin</span>
+    <span class="hot">C++</span><span>React</span><span>SQL</span><span>Vue</span>
+    <span>Rust</span><span>Go</span><span>Java</span><span>Swift</span>
+    <span>Node.js</span><span>Blazor</span><span>Docker</span><span>Django</span>
+    <span>Flask</span><span>Git</span><span>Linux</span><span>Azure</span>
+    <span>HTML</span><span>CSS</span>
+  </div>
+  <div class="sinner">
+    <div class="smark" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path d="M11 1.5Q12.2 9.8 20.5 11Q12.2 12.2 11 20.5Q9.8 12.2 1.5 11Q9.8 9.8 11 1.5Z"/>
+        <path d="M18.6 15.4Q19.2 18.8 22.6 19.4Q19.2 20 18.6 23.4Q18 20 14.6 19.4Q18 18.8 18.6 15.4Z" opacity=".8"/>
+      </svg>
+    </div>
+    <div class="stitle">Інформатика</div>
+    <div class="ssub">ігри · презентації · помічники</div>
+    <div class="sbar" aria-hidden="true"><i></i></div>
+  </div>
+</div>
+<script>
+  /* Раз за сесію: на повторному заході ховаємо екран СИНХРОННО (ще до першого
+     малювання), тому блимання немає. Помилку доступу до sessionStorage ковтаємо. */
+  try {
+    if (sessionStorage.getItem("splashSeen")) {
+      document.getElementById("splash").classList.add("skip");
+    } else {
+      sessionStorage.setItem("splashSeen", "1");
+    }
+  } catch (e) {}
+</script>
  <div class="cards">
 
   <div class="card">

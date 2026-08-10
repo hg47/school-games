@@ -177,6 +177,14 @@ button,input,select,textarea{font-family:inherit; font-size:inherit; color:inher
 .techbg .b{font-size:clamp(20px,4vw,44px); opacity:.045}
 .techbg .c{font-size:clamp(15px,2.8vw,30px); opacity:.035}
 .techbg .hot{color:var(--accent); opacity:.11}
+/* ⚠️ У темній темі бліді написи на темному тлі майже не видно, тому там
+   помітно піднімаємо непрозорість. Світлу лишаємо як є. theme.js завжди
+   проставляє конкретний data-theme, тож селектор спрацьовує. */
+:root[data-theme="dark"] .techbg span{opacity:.10}
+:root[data-theme="dark"] .techbg .a{opacity:.13}
+:root[data-theme="dark"] .techbg .b{opacity:.095}
+:root[data-theme="dark"] .techbg .c{opacity:.07}
+:root[data-theme="dark"] .techbg .hot{opacity:.20}
 
 /* ─── ДРІБНИЦІ ────────────────────────────────────────────────────────── */
 /* знак сайту: джойстик на власному градієнті — читається як логотип */
@@ -212,10 +220,22 @@ button,input,select,textarea{font-family:inherit; font-size:inherit; color:inher
 .themebtn svg{display:block; width:18px; height:18px}
 .themebtn-fixed{position:fixed; top:var(--s4); right:var(--s4); z-index:6}
 
-.doclink{display:inline-block; margin-top:var(--s1); color:var(--ink-3);
-  font-size:var(--fs-xs); text-decoration:underline; text-underline-offset:2px;
-  text-decoration-color:var(--line-2)}
+.doclink{display:inline-flex; align-items:center; gap:.35em; margin-top:var(--s1);
+  color:var(--ink-3); font-size:var(--fs-xs); text-decoration:underline;
+  text-underline-offset:2px; text-decoration-color:var(--line-2)}
 .doclink:hover{color:var(--ink-2); text-decoration-color:var(--ink-3)}
+/* Іконка «інформація» перед посиланням «Про сайт і дані». Маска + currentColor,
+   тож колір збігається з текстом лінка й у світлій, і в темній темі. Одне
+   правило на весь сайт — розмітку в 14 файлах не чіпаємо. */
+.doclink::before{
+  content:""; flex:none; width:1.05em; height:1.05em;
+  background:currentColor;
+  -webkit-mask:var(--info-ico) center/contain no-repeat;
+  mask:var(--info-ico) center/contain no-repeat;
+}
+:root{
+  --info-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 2a10 10 0 100 20 10 10 0 000-20zm0 2a8 8 0 110 16 8 8 0 010-16zm-1 6h2v7h-2v-7zm1-4.4a1.3 1.3 0 110 2.6 1.3 1.3 0 010-2.6z'/%3E%3C/svg%3E");
+}
 
 footer{text-align:center; color:var(--ink-3); font-size:var(--fs-xs); line-height:1.55}
 footer .sig,.sig{display:block; margin-top:var(--s1)}
