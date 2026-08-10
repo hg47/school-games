@@ -38,6 +38,10 @@
     background:var(--surface-2); border:1px solid var(--line-2); border-radius:var(--r-md)}
   .codebox input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 4px var(--brand-ring)}
   .hint{margin-top:var(--s3); color:var(--ink-3); font-size:var(--fs-xs); line-height:1.5}
+  /* Повернення на головну в шапці (slides.css тут не підключено, тож свій стиль). */
+  .top .home{display:inline-flex; align-items:center; gap:6px; color:var(--ink-2);
+    font-size:var(--fs-sm); font-weight:650; text-decoration:none}
+  .top .home:hover{color:var(--accent)}
 </style>
 <link rel="icon" href="favicon.svg" type="image/svg+xml" data-head-v1>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -58,6 +62,7 @@
 <body data-techbg>
 <div class="app">
   <div class="top">
+    <a class="home" href="index.html">← на головну</a>
     <div class="logo"><span class="dot"></span>Навчальні ігри</div>
     <span class="badge">демо</span>
     <div class="spacer"></div>
