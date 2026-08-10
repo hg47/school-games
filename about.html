@@ -15,6 +15,11 @@
   .back{display:inline-flex; align-items:center; gap:6px; margin-bottom:var(--s4);
     color:var(--ink-2); font-size:var(--fs-sm); font-weight:650; text-decoration:none}
   .back:hover{color:var(--ink)}
+  .back svg{width:15px; height:15px; fill:currentColor}
+  /* значок сторінки — ліворуч від заголовка, як на інших сторінках сайту */
+  .titlerow{display:flex; align-items:center; gap:var(--s3); margin-bottom:var(--s2)}
+  .titlerow .mark{margin:0; width:52px; height:52px; border-radius:15px; font-size:27px}
+  .titlerow h1{margin:0}
   h1{font-size:var(--fs-hero); margin-bottom:var(--s2)}
   h2{font-size:var(--fs-h2); margin:0 0 var(--s3)}
   .lede{color:var(--ink-2); font-size:var(--fs-sm); line-height:1.55}
@@ -63,10 +68,13 @@
 </head>
 <body>
 <div class="doc">
-  <a class="back" href="index.html">← На головну</a>
+  <a class="back" href="index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2 3 11h2.2v9h4.3v-5.6h5V20h4.3v-9H21z"/></svg> На головну</a>
 
   <div class="card">
-    <h1>Про сайт і дані</h1>
+    <div class="titlerow">
+      <div class="mark" aria-hidden="true">ℹ️</div>
+      <h1>Про сайт і дані</h1>
+    </div>
     <p class="lede">Ця сторінка — для учнів, батьків і адміністрації. Тут просто написано,
       що це за сайт, які дані йому потрібні, чого він не робить і до кого звертатися.</p>
   </div>
