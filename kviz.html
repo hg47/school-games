@@ -11,11 +11,20 @@
   /* Квіз-плеєр: більшість стилів беремо з site/slides/game.css.
      Тут лише дрібне, специфічне для самоперевірки. */
   .kmeta{color:var(--ink-3); font-size:var(--fs-sm)}
-  /* Підбір: теми одна під одною на всю ширину; уроки всередині — сіткою. */
+  /* Підбір: кожна тема — окрема панель; заголовок-шапка згори, уроки всередині. */
   #lessons{display:flex; flex-direction:column; gap:var(--s4)}
-  .unitname{display:flex; align-items:baseline; justify-content:space-between;
-    gap:var(--s3); flex-wrap:wrap}
-  .unitname .ucount{font-size:var(--fs-xs); font-weight:650; color:var(--ink-3)}
+  #lessons .unitbox{overflow:hidden}          /* щоб шапка не вилазила за круглі кути */
+  /* ⚠️ base .unitbox у slides.css розрахований на <summary>; наш заголовок —
+     звичайний div, тож задаємо йому відступи й тло самі. */
+  #lessons .unitname{display:flex; align-items:baseline; justify-content:space-between;
+    gap:var(--s3); flex-wrap:wrap; margin:0; padding:var(--s4);
+    background:var(--surface-2); border-bottom:1px solid var(--line);
+    font-size:var(--fs-body); font-weight:700; color:var(--ink)}
+  #lessons .unitname .ucount{font-size:var(--fs-xs); font-weight:650; color:var(--ink-3)}
+  /* Явна анімація появи панелей теми (елементи малюються скриптом). */
+  @media (prefers-reduced-motion:no-preference){
+    #lessons .unitbox{opacity:0; animation:cardIn .5s cubic-bezier(.22,.61,.36,1) both}
+  }
   .lnum{align-self:flex-start; font-size:var(--fs-xs); font-weight:700;
     letter-spacing:.04em; text-transform:uppercase; color:var(--accent);
     background:var(--accent-soft); border-radius:var(--r-full); padding:3px 10px}
