@@ -13,6 +13,10 @@
 /* ── спільне ───────────────────────────────────────────────────────────── */
 .wrap{width:100%; max-width:1000px; margin:0 auto; padding:var(--s5) var(--s4) var(--s6)}
 .hero{margin-bottom:var(--s5)}
+/* Значок сторінки — той самий, що на картці головної. Заголовок ліворуч,
+   тому й значок прижимаємо ліворуч, а не центруємо (базове margin:0 auto). */
+.hero .mark{margin-left:0}
+.hero .mark svg{width:40px; height:40px; fill:#fff}
 .hero h1{font-size:var(--fs-hero); background:var(--title-grad);
   -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:var(--s2)}
 .hero .lede{color:var(--ink-2); font-size:var(--fs-sm); line-height:1.55; max-width:62ch}
