@@ -27,9 +27,16 @@
   .short p{color:var(--ink); font-size:var(--fs-body)}
   ul{margin:0 0 var(--s3); padding:0; list-style:none; display:grid; gap:var(--s2)}
   ul:last-child{margin-bottom:0}
-  li{display:flex; gap:var(--s3); align-items:flex-start;
+  /* ⛔⛔ БУЛО `li{display:flex}` — і це ламало верстку. У flex-контейнері
+     КОЖЕН inline-вміст стає окремим елементом: текст, потім <b>, потім знову
+     текст — і між ними ще й gap. З короткими <b> («рекламу») це було майже
+     непомітно, а на довгій фразі пункт розсипався на колонки з дірами.
+     ⭐ Тому позначка — абсолютно спозиціонований ::before, а сам текст пункту
+     тече звичайним рядком. */
+  li{position:relative; padding-left:22px;
     color:var(--ink-2); font-size:var(--fs-sm); line-height:1.55}
-  li::before{content:"•"; flex:none; color:var(--ink-3); font-weight:700; line-height:1.5}
+  li::before{content:"•"; position:absolute; left:0; top:0;
+    color:var(--ink-3); font-weight:700; line-height:1.55}
   ul.yes li::before{content:"✓"; color:var(--ok)}
   ul.no li::before{content:"✕"; color:var(--bad)}
   /* таблиця «що збираємо» — на телефоні перетворюється на картки */
