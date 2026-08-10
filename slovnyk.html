@@ -1,0 +1,90 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Словник термінів</title>
+<meta name="author" content="Процюк О. К.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/slides.css">
+<script src="assets/theme.js"></script>
+<style>
+  .searchbox{position:relative; margin-bottom:var(--s4)}
+  .searchbox input{width:100%; padding:14px 16px; font:inherit; font-size:var(--fs-body);
+    border-radius:var(--r-md); border:1px solid var(--line-2); background:var(--surface);
+    color:var(--ink)}
+  .searchbox input:focus{outline:none; border-color:var(--brand);
+    box-shadow:0 0 0 4px var(--brand-ring)}
+  .kmeta{color:var(--ink-3); font-size:var(--fs-sm); margin-bottom:var(--s4)}
+  .letter{font-size:var(--fs-h2); font-weight:750; color:var(--accent);
+    margin:var(--s5) 0 var(--s2); padding-bottom:4px; border-bottom:2px solid var(--line)}
+  .term{padding:var(--s3) 0; border-bottom:1px solid var(--line)}
+  .term .t{font-weight:700; color:var(--ink)}
+  .term .g{font-size:var(--fs-xs); font-weight:700; color:var(--accent);
+    background:var(--accent-soft); border-radius:var(--r-full); padding:1px 8px;
+    margin-left:8px; white-space:nowrap}
+  .term .d{color:var(--ink-2); font-size:var(--fs-sm); line-height:1.55; margin-top:2px}
+  .empty{color:var(--ink-3); padding:var(--s5) 0; text-align:center}
+</style>
+<body data-techbg>
+
+<div class="wrap">
+  <a class="backlink" href="index.html">← на головну</a>
+
+  <div class="hero">
+    <div class="hero-head">
+      <div class="mark" aria-hidden="true">📖</div>
+      <h1>Словник термінів</h1>
+    </div>
+    <p class="lede">Означення з підручника — коротко й по темах. Зручно повторити
+      перед контрольною: почни вводити слово, і список звузиться.</p>
+  </div>
+
+  <div class="searchbox">
+    <input id="q" type="search" placeholder="Пошук терміна…" autocomplete="off">
+  </div>
+  <p class="kmeta" id="meta"></p>
+  <div id="list"></div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const el = (t, c, h) => { const e = document.createElement(t);
+    if (c) e.className = c; if (h != null) e.innerHTML = h; return e; };
+  const esc = s => s.replace(/[&<>]/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m]));
+  const list = document.getElementById("list");
+  const meta = document.getElementById("meta");
+  const q = document.getElementById("q");
+  let TERMS = [];
+
+  fetch("assets/slovnyk.json", { cache: "no-cache" })
+    .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+    .then(d => { TERMS = d.terms; render(""); })
+    .catch(() => { meta.textContent = "Не вдалося завантажити словник."; });
+
+  function render(query) {
+    const s = query.trim().toLowerCase();
+    const items = s
+      ? TERMS.filter(x => x.t.toLowerCase().includes(s) || x.d.toLowerCase().includes(s))
+      : TERMS;
+    list.innerHTML = "";
+    meta.textContent = s
+      ? ("Знайдено: " + items.length + " з " + TERMS.length)
+      : ("Усього термінів: " + TERMS.length);
+    if (!items.length) { list.appendChild(el("div", "empty", "Нічого не знайдено.")); return; }
+
+    let letter = "";
+    items.forEach(x => {
+      const L = x.t[0].toUpperCase();
+      if (L !== letter && !s) { letter = L; list.appendChild(el("div", "letter", L)); }
+      const row = el("div", "term");
+      const grades = x.g && x.g.length
+        ? '<span class="g">' + x.g.join(", ") + " кл.</span>" : "";
+      row.appendChild(el("div", "t", esc(x.t) + grades));
+      row.appendChild(el("div", "d", esc(x.d)));
+      list.appendChild(row);
+    });
+  }
+
+  q.addEventListener("input", () => render(q.value));
+})();
+</script>
