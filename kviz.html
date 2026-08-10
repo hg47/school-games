@@ -11,17 +11,13 @@
   /* Квіз-плеєр: більшість стилів беремо з site/slides/game.css.
      Тут лише дрібне, специфічне для самоперевірки. */
   .kmeta{color:var(--ink-3); font-size:var(--fs-sm)}
-  /* Підбір: кожна тема — окрема панель; заголовок-шапка згори, уроки всередині. */
+  /* Підбір: кожна тема — згорнутий <details>; клік по заголовку розгортає уроки.
+     Базовий .unitbox у slides.css уже стилізує summary й стрілку .chev. */
   #lessons{display:flex; flex-direction:column; gap:var(--s4)}
-  #lessons .unitbox{overflow:hidden}          /* щоб шапка не вилазила за круглі кути */
-  /* ⚠️ base .unitbox у slides.css розрахований на <summary>; наш заголовок —
-     звичайний div, тож задаємо йому відступи й тло самі. */
-  #lessons .unitname{display:flex; align-items:baseline; justify-content:space-between;
-    gap:var(--s3); flex-wrap:wrap; margin:0; padding:var(--s4);
-    background:var(--surface-2); border-bottom:1px solid var(--line);
-    font-size:var(--fs-body); font-weight:700; color:var(--ink)}
-  #lessons .unitname .ucount{font-size:var(--fs-xs); font-weight:650; color:var(--ink-3)}
-  /* Явна анімація появи панелей теми (елементи малюються скриптом). */
+  #lessons .unitbox{overflow:hidden}
+  /* ⚠️ .lessons має display:grid (авторський стиль), і він перебиває браузерне
+     приховування вмісту згорнутого <details>. Тому ховаємо вміст явно. */
+  #lessons details.unitbox:not([open]) > .lessons{display:none}
   @media (prefers-reduced-motion:no-preference){
     #lessons .unitbox{opacity:0; animation:cardIn .5s cubic-bezier(.22,.61,.36,1) both}
   }
@@ -137,12 +133,14 @@
     d.themes.forEach(t => {
       const nq = t.lessons.reduce((s, l) =>
         s + l.cards.reduce((a, c) => a + c.questions.length, 0), 0);
-      const box = el("div", "unitbox");
-      const name = el("div", "unitname");
-      name.appendChild(el("span", null, t.title));
-      name.appendChild(el("span", "ucount",
-        t.lessons.length + " уроків · " + plural(nq)));
-      box.appendChild(name);
+      // Тема — згорнутий <details>: клік по summary розгортає уроки.
+      const box = el("details", "unitbox");
+      const sum = document.createElement("summary");
+      const chev = el("span", "chev", "▸"); chev.setAttribute("aria-hidden", "true");
+      sum.appendChild(chev);
+      sum.appendChild(el("span", "unitname", t.title));
+      sum.appendChild(el("span", "cnt", t.lessons.length + " уроків · " + plural(nq)));
+      box.appendChild(sum);
 
       const ls = el("div", "lessons");
       t.lessons.forEach(l => {
