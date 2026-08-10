@@ -1,6 +1,6 @@
 # Gemini — промпти для картинок сайту ігор
 
-**Сайт:** `https://strykers79.github.io/school-games/`
+**Сайт:** `https://hg47.github.io/school-games/`
 **Гама:** оранж `#ff7a2f` → рожевий `#ff5f8a` → фіалковий `#7c5cff`, темна база `#07070c`
 
 ---
@@ -103,7 +103,7 @@
    <link rel="apple-touch-icon" href="apple-touch-icon.png">
    <meta property="og:title" content="Навчальні ігри">
    <meta property="og:description" content="…">
-   <meta property="og:image" content="https://strykers79.github.io/school-games/og-cover.png">
+   <meta property="og:image" content="https://hg47.github.io/school-games/og-cover.png">
    ```
    ⚠️ **`og:image` мусить бути ПОВНОЮ адресою** (`https://…`), а не `og-cover.png` —
    з відносним шляхом превью не працює ні в Viber, ні в Telegram, ні в Classroom.
