@@ -160,6 +160,24 @@ button,input,select,textarea{font-family:inherit; font-size:inherit; color:inher
 .field:focus{outline:none; border-color:var(--brand); background:var(--surface);
   box-shadow:0 0 0 4px var(--brand-ring)}
 
+/* ─── ФОН-ОБОЇ З НАЗВ МОВ І ФРЕЙМВОРКІВ ──────────────────────────────────
+   Доречно на сайті вчителя інформатики. Вставляє його assets/theme.js на
+   сторінки з атрибутом <body data-techbg>. Дуже бліді написи під нахилом.
+   ⚠️ z-index:-1 — фон лягає НАД заливкою тла body, але ПІД звичайним
+   контентом, тому текст лишається читабельним без правок z-index на сторінках.
+   Картки мають непрозоре тло, тож слова видно лише на полях. Колір — з теми. */
+.techbg{
+  position:fixed; inset:-15%; z-index:-1; overflow:hidden;
+  pointer-events:none; user-select:none; -webkit-user-select:none;
+  display:flex; flex-wrap:wrap; align-content:center; justify-content:center;
+  gap:.55em 1.3em; transform:rotate(-8deg); font-weight:800; letter-spacing:.01em;
+}
+.techbg span{color:var(--ink); opacity:.05; line-height:1; white-space:nowrap}
+.techbg .a{font-size:clamp(30px,6.5vw,66px); opacity:.06}
+.techbg .b{font-size:clamp(20px,4vw,44px); opacity:.045}
+.techbg .c{font-size:clamp(15px,2.8vw,30px); opacity:.035}
+.techbg .hot{color:var(--accent); opacity:.11}
+
 /* ─── ДРІБНИЦІ ────────────────────────────────────────────────────────── */
 /* знак сайту: джойстик на власному градієнті — читається як логотип */
 .mark{
