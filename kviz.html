@@ -1,0 +1,248 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Самоперевірка · квізи</title>
+<meta name="author" content="Процюк О. К.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/slides.css">
+<link rel="stylesheet" href="assets/game.css">
+<script src="assets/theme.js"></script>
+<style>
+  /* Квіз-плеєр: більшість стилів беремо з site/slides/game.css.
+     Тут лише дрібне, специфічне для самоперевірки. */
+  .kmeta{color:var(--ink-3); font-size:var(--fs-sm)}
+  .card-btns{display:flex; flex-wrap:wrap; gap:var(--s2); margin-top:var(--s1)}
+  .qtop{display:flex; align-items:center; justify-content:space-between;
+    gap:var(--s3); margin-bottom:var(--s3); color:var(--ink-2); font-size:var(--fs-sm)}
+  .qbar{flex:1; height:6px; border-radius:99px; background:var(--line); overflow:hidden}
+  .qbar i{display:block; height:100%; background:var(--btn-grad); border-radius:99px;
+    transition:width .3s ease}
+  .qtext{font-size:var(--fs-h2); font-weight:700; margin-bottom:var(--s4); line-height:1.3}
+  .opts{display:grid; gap:var(--s3)}
+  .expl{margin-top:var(--s4); padding:var(--s4); border-radius:var(--r-md);
+    background:var(--surface-2); border-left:3px solid var(--accent);
+    font-size:var(--fs-sm); color:var(--ink-2); line-height:1.55}
+  .expl b{color:var(--ink)}
+  .qactions{display:flex; gap:var(--s3); margin-top:var(--s4); flex-wrap:wrap}
+  .qactions .btn{width:auto; min-width:170px}
+  .scorebox{text-align:center; padding:var(--s5) var(--s4)}
+  .scorenum{font-size:56px; font-weight:800; background:var(--title-grad);
+    -webkit-background-clip:text; background-clip:text; color:transparent; line-height:1.1}
+  .scoresub{color:var(--ink-2); margin:var(--s2) 0 var(--s5)}
+  .hidden{display:none !important}
+</style>
+<body data-techbg>
+
+<div class="wrap">
+  <a class="backlink" href="index.html">← на головну</a>
+
+  <div class="hero">
+    <div class="hero-head">
+      <div class="mark" aria-hidden="true">📝</div>
+      <h1>Самоперевірка</h1>
+    </div>
+    <p class="lede">Обери клас, урок і квіз — і перевір себе. Після кожної відповіді
+      покажемо, <b>що правильно й чому</b>. <b>Код не потрібен</b>, нічого не зберігається —
+      це тренування, а не оцінка.</p>
+  </div>
+
+  <!-- ВИБІР: клас → урок → картка -->
+  <div id="pick">
+    <div class="chips" id="chips"></div>
+    <div id="lessons" class="lessons"></div>
+    <p id="pickmsg" class="kmeta"></p>
+  </div>
+
+  <!-- ГРА -->
+  <div id="play" class="hidden">
+    <div class="stage" id="stage"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = s => document.querySelector(s);
+  const el = (t, c, h) => { const e = document.createElement(t);
+    if (c) e.className = c; if (h != null) e.innerHTML = h; return e; };
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const KIND = { "вхідний": "Вхідний квіз", "підсумковий": "Підсумковий квіз", "квіз": "Квіз" };
+
+  const chips = $("#chips"), lessons = $("#lessons"), pickmsg = $("#pickmsg");
+  const pick = $("#pick"), play = $("#play"), stage = $("#stage");
+  const cache = {};   // grade → дані класу
+
+  // ── вибір класу ────────────────────────────────────────────────────────
+  fetch("assets/quiz/index.json", { cache: "no-cache" })
+    .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+    .then(idx => {
+      idx.classes.forEach((c, i) => {
+        const b = el("button", "chip", c.cls);
+        b.setAttribute("aria-pressed", "false");
+        b.onclick = () => selectClass(c, b);
+        chips.appendChild(b);
+      });
+    })
+    .catch(e => { pickmsg.textContent = "Не вдалося завантажити перелік квізів."; });
+
+  function selectClass(c, btn) {
+    [...chips.children].forEach(x => x.setAttribute("aria-pressed", "false"));
+    btn.setAttribute("aria-pressed", "true");
+    lessons.innerHTML = "";
+    pickmsg.textContent = "Завантажую…";
+    const done = data => { pickmsg.textContent = ""; renderLessons(data); };
+    if (cache[c.grade]) return done(cache[c.grade]);
+    fetch("assets/quiz/" + c.file, { cache: "no-cache" })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+      .then(d => { cache[c.grade] = d; done(d); })
+      .catch(e => { pickmsg.textContent = "Не вдалося завантажити квізи класу."; });
+  }
+
+  // ── перелік уроків і карток ──────────────────────────────────────────────
+  function renderLessons(d) {
+    lessons.innerHTML = "";
+    d.themes.forEach(t => {
+      const box = el("div", "unitbox");
+      box.appendChild(el("div", "unitname", t.title));
+      const ls = el("div", "lessons");
+      t.lessons.forEach(l => {
+        const item = el("div", "lesson");
+        item.appendChild(el("div", "lnum", "урок " + l.n));
+        item.appendChild(el("div", "ltitle", l.title));
+        const btns = el("div", "card-btns");
+        l.cards.forEach(card => {
+          const label = (KIND[card.kind] || card.kind) +
+            " · " + card.questions.length + " пит.";
+          const b = el("button", "btn ghost", label);
+          b.style.width = "auto";
+          b.onclick = () => start(d.cls, l, card);
+          btns.appendChild(b);
+        });
+        item.appendChild(btns);
+        ls.appendChild(item);
+      });
+      box.appendChild(ls);
+      lessons.appendChild(box);
+    });
+  }
+
+  // ── гра ──────────────────────────────────────────────────────────────────
+  let S = null;
+  function start(cls, lesson, card) {
+    // копія питань; варіанти тасуємо на кожній спробі
+    const qs = card.questions.map(q => ({
+      q: q.q, type: q.type, expl: q.expl,
+      opts: shuffle(q.opts.map(o => ({ t: o.t, ok: o.ok })))
+    }));
+    S = { cls, lesson, card, qs, i: 0, correct: 0, picked: new Set(), checked: false };
+    pick.classList.add("hidden");
+    play.classList.remove("hidden");
+    renderQ();
+    window.scrollTo(0, 0);
+  }
+
+  function backToPick() {
+    play.classList.add("hidden");
+    pick.classList.remove("hidden");
+    S = null;
+  }
+
+  function renderQ() {
+    const q = S.qs[S.i];
+    S.picked = new Set();
+    S.checked = false;
+    stage.innerHTML = "";
+
+    const top = el("div", "qtop");
+    top.appendChild(el("span", null, "Питання " + (S.i + 1) + " з " + S.qs.length));
+    const bar = el("div", "qbar"); const fill = el("i");
+    fill.style.width = Math.round(S.i / S.qs.length * 100) + "%";
+    bar.appendChild(fill); top.appendChild(bar);
+    stage.appendChild(top);
+
+    stage.appendChild(el("div", "qtext", q.q));
+
+    const opts = el("div", "opts");
+    q.opts.forEach((o, k) => {
+      const tile = el("button", "tile");
+      if (q.type === "multi") tile.appendChild(el("span", "pbox", ""));
+      tile.appendChild(el("span", null, o.t));
+      tile.onclick = () => toggle(k, tile);
+      opts.appendChild(tile);
+    });
+    stage.appendChild(opts);
+
+    const act = el("div", "qactions");
+    const main = el("button", "btn", "Перевірити");
+    main.onclick = () => { S.checked ? next() : check(main); };
+    act.appendChild(main);
+    const quit = el("button", "btn ghost", "Вийти");
+    quit.style.width = "auto"; quit.onclick = backToPick;
+    act.appendChild(quit);
+    stage.appendChild(act);
+    S._main = main;
+  }
+
+  function toggle(k, tile) {
+    if (S.checked) return;
+    const q = S.qs[S.i];
+    if (q.type === "single") {
+      S.picked = new Set([k]);
+      [...tile.parentNode.children].forEach(x => x.classList.remove("sel"));
+      tile.classList.add("sel");
+    } else {
+      if (S.picked.has(k)) { S.picked.delete(k); tile.classList.remove("sel"); }
+      else { S.picked.add(k); tile.classList.add("sel"); }
+    }
+  }
+
+  function check(main) {
+    const q = S.qs[S.i];
+    if (!S.picked.size) return;                 // нічого не обрано
+    S.checked = true;
+    const tiles = [...stage.querySelectorAll(".tile")];
+    let allRight = true;
+    q.opts.forEach((o, k) => {
+      const picked = S.picked.has(k);
+      if (o.ok) tiles[k].classList.add("ok");
+      if (picked && !o.ok) { tiles[k].classList.add("err"); allRight = false; }
+      if (!picked && o.ok) allRight = false;
+      tiles[k].disabled = true;
+    });
+    if (allRight) S.correct++;
+
+    const ex = el("div", "expl",
+      (allRight ? "<b>✅ Правильно.</b> " : "<b>❌ Не зовсім.</b> ") + q.expl);
+    stage.querySelector(".opts").after(ex);
+    main.textContent = (S.i + 1 < S.qs.length) ? "Далі →" : "Результат →";
+  }
+
+  function next() {
+    if (S.i + 1 < S.qs.length) { S.i++; renderQ(); }
+    else showScore();
+    window.scrollTo(0, 0);
+  }
+
+  function showScore() {
+    const n = S.qs.length, c = S.correct, pct = Math.round(c / n * 100);
+    const msg = pct >= 90 ? "Відмінно!" : pct >= 70 ? "Добре, майже все зрозуміло."
+      : pct >= 50 ? "Непогано — є що повторити." : "Варто пройти тему ще раз.";
+    stage.innerHTML = "";
+    const box = el("div", "scorebox");
+    box.appendChild(el("div", "scorenum", c + " / " + n));
+    box.appendChild(el("div", "scoresub", msg + " (" + pct + "%)"));
+    const act = el("div", "qactions");
+    act.style.justifyContent = "center";
+    const again = el("button", "btn", "Пройти ще раз");
+    again.style.width = "auto";
+    again.onclick = () => start(S.cls, S.lesson, S.card);
+    act.appendChild(again);
+    const other = el("button", "btn ghost", "Інші квізи");
+    other.style.width = "auto"; other.onclick = backToPick;
+    act.appendChild(other);
+    box.appendChild(act);
+    stage.appendChild(box);
+  }
+})();
+</script>
