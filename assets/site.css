@@ -144,6 +144,22 @@ button,input,select,textarea{font-family:inherit; font-size:inherit; color:inher
   .card:nth-child(n+5){animation-delay:.3s}
 }
 @keyframes cardIn{from{opacity:0; transform:translateY(16px)} to{opacity:1; transform:none}}
+/* Те саме для списків уроків і помічників (materials, gems): вони не .card, а
+   .unitbox / .lesson, і малюються скриптом уже після завантаження — CSS-анімація
+   грає при вставці. Коротша й з дрібнішою лесенкою: списки бувають довгі, тож
+   при зміні фільтра оновлення виглядає плавним, а не стрибучим. */
+@media (prefers-reduced-motion:no-preference){
+  .unitbox, .lessons .lesson{opacity:0; animation:cardIn .42s cubic-bezier(.22,.61,.36,1) both}
+  .lessons .lesson:nth-child(1){animation-delay:.02s}
+  .lessons .lesson:nth-child(2){animation-delay:.06s}
+  .lessons .lesson:nth-child(3){animation-delay:.10s}
+  .lessons .lesson:nth-child(4){animation-delay:.14s}
+  .lessons .lesson:nth-child(5){animation-delay:.18s}
+  .lessons .lesson:nth-child(n+6){animation-delay:.21s}
+  .unitbox:nth-child(1){animation-delay:.04s}
+  .unitbox:nth-child(2){animation-delay:.12s}
+  .unitbox:nth-child(n+3){animation-delay:.18s}
+}
 
 /* ─── КНОПКИ ──────────────────────────────────────────────────────────── */
 .btn{
