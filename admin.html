@@ -121,6 +121,7 @@
           <label class="row" style="gap:6px">Спроб: <input id="cAttempts" type="number" min="1" max="5" value="2" style="width:64px"></label>
           <button class="btn" id="genCodes">Згенерувати для обраних</button>
         </div>
+        <div id="cGameDesc" class="muted" style="margin:-4px 0 10px"></div>
         <div id="cChecks" class="checks"></div>
         <div id="cMsg" class="msg"></div>
         <div id="genResult"></div>
@@ -187,10 +188,16 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
 
 // ── дані ──
 async function loadGames(){
-  const { data, error } = await sb.from('games').select('slug,title').eq('active',true).order('title');
+  const { data, error } = await sb.from('games').select('slug,title,description').eq('active',true).order('title');
   games = data||[];
   el('cGame').innerHTML = games.map(g=>`<option value="${esc(g.slug)}">${esc(g.title)}</option>`).join('');
+  updateGameDesc();
 }
+function updateGameDesc(){
+  const g = games.find(x=>x.slug===el('cGame').value);
+  el('cGameDesc').textContent = g?.description || '';
+}
+el('cGame').onchange = updateGameDesc;
 async function loadStudents(){
   const { data, error } = await sb.from('students').select('id,full_name,class_label').order('class_label').order('full_name');
   if(error){ msg('stMsg', error.message, 'err'); return; }
