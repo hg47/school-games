@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Метадані файлу: слід, а не свідчення — гра для 9 класу</title>
+<meta name="description" content="Підсумкова робота ГР 4 (10 закритих питань з 12): що їде разом із файлом .docx і PDF — автор, дати, коментарі, колонтитул. Для 9 класу.">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/game.css">
+<script src="../assets/theme.js"></script>
+<script src="../supabase-config.js"></script>
+<script src="../assets/db.js"></script>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml" data-head-v1>
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+</head>
+<body data-techbg>
+<div class="app">
+  <div class="top">
+    <div class="logo"><span class="dot"></span>Метадані файлу</div>
+    <div class="spacer"></div>
+    <div class="dots" id="dots" aria-hidden="true"></div>
+    <div class="stars">⭐ <b id="stars">0</b></div>
+  </div>
+
+  <div class="card">
+    <div class="head">
+      <div class="bit" aria-hidden="true">📄</div>
+      <div class="bubble" id="say">Це частина підсумкової роботи ГР 4. Тут — 10 закритих питань з 12. Останнє, відкрите питання (2 бали) здається окремо в Classroom.</div>
+    </div>
+    <div class="stage" id="stage"></div>
+    <div class="actions" style="padding:0 18px 22px">
+      <button class="btn" id="next">Почати →</button>
+    </div>
+  </div>
+
+  <footer>Підсумкова робота ГР 4 (частина 1 з 2) · «Метадані файлу» · 9 клас · уроки 9–10<br><span class="sig" data-sig>© 2025–2026 Процюк О. К. · вчитель інформатики · Харківський ліцей № 47</span><br><a class="doclink" data-doc href="../about.html">Про сайт і дані</a></footer>
+</div>
+<div class="flash" id="flash" aria-hidden="true">⭐</div>
+
+<script>
+(() => {
+  "use strict";
+  const PLAY = (()=>{ try{ return JSON.parse(sessionStorage.getItem('play')||'null'); }catch(e){ return null; } })();
+  if(!PLAY || PLAY.game_slug !== 'metadani-9'){ location.replace('../index.html'); return; }
+  (function(){ var s0=document.getElementById('say'); if(s0) s0.innerHTML=
+    'Привіт, <b>'+(PLAY.student_name||'друже')+'</b>! Це <b>підсумкова робота ГР 4</b> — безпека й етика. '
+    +'10 закритих питань про те, що <b>їде разом</b> із файлом .docx і PDF, коли ти комусь його надсилаєш. '
+    +'Одинадцяте, відкрите питання (2 бали) — <b>окремо в Classroom</b>, його перевірить учитель вручну. '
+    +'Спроб лишилось: <b>'+(PLAY.remaining!=null?PLAY.remaining:'?')+'</b>.'; })();
+
+  const $ = id => document.getElementById(id);
+  const stage=$("stage"), say=$("say"), nextBtn=$("next"), starsEl=$("stars"), dotsEl=$("dots");
+  let stars=0, round=0, mistakes=0;
+  const TOTAL_ROUNDS=4;
+  const MAX=10; // 3 + 3 + 2 + 2 закритих питань, по 1 балу кожне
+
+  for(let i=0;i<TOTAL_ROUNDS;i++){const d=document.createElement("i"); dotsEl.appendChild(d);}
+  const paintDots=()=>{[...dotsEl.children].forEach((d,i)=>{d.className = i<round?"done":(i===round?"on":"");});};
+
+  const addStar = (n=1) => {
+    stars+=n; starsEl.textContent=stars;
+    const f=$("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
+  };
+  const bit = html => { say.innerHTML=html; };
+  const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
+
+  // ── Одне питання з ОДНІЄЮ правильною відповіддю (1 бал) ──
+  // cfg: {task, q, opts:[{t, ok, note?}], win}
+  function singleQuestion(cfg, onDone){
+    stage.innerHTML=`<p class="task">${cfg.task}</p>
+      <div class="prompt">${cfg.q}</div>
+      <div class="pool" id="pool"></div>`;
+    const pool=$("pool");
+    shuffle(cfg.opts.slice()).forEach(o=>{
+      const b=document.createElement("button"); b.className="tile";
+      b.innerHTML=o.t;
+      b.onclick=()=>{
+        if(b.dataset.done)return;
+        if(o.ok){
+          b.classList.add("ok"); b.dataset.done=1; addStar();
+          bit(cfg.win); [...pool.children].forEach(x=>x.disabled=true);
+          onDone();
+        } else {
+          b.classList.add("err"); setTimeout(()=>b.classList.remove("err"),500);
+          mistakes++; bit(o.note ? `Ні — ${o.note}` : "Подумай ще раз \u{1F642}");
+        }
+      };
+      pool.appendChild(b);
+    });
+  }
+
+  // ── Питання «познач усі правильні, потім перевір» (1 бал за все питання, все-або-нічого) ──
+  // cfg: {task, q, items:[{n, ok, note?}], win, fail}
+  function multiQuestion(cfg, onDone){
+    stage.innerHTML=`<p class="task">${cfg.task}</p>
+      <div class="prompt">${cfg.q}</div>
+      <div class="pool" id="pool"></div>
+      <div class="actions" style="padding:14px 0 0"><button class="btn" id="checkBtn">Перевірити ✓</button></div>`;
+    const pool=$("pool");
+    const boxes=[];
+    shuffle(cfg.items.slice()).forEach(it=>{
+      const b=document.createElement("button"); b.className="tile"; b.type="button";
+      b.innerHTML=`<span class="pbox" aria-hidden="true"></span>${it.n}`;
+      b.onclick=()=>{
+        if(b.dataset.locked)return;
+        const on = b.classList.toggle("sel");
+        b.dataset.on = on ? "1" : "0";
+      };
+      boxes.push({b,it}); pool.appendChild(b);
+    });
+    $("checkBtn").onclick=()=>{
+      const chosenOk = boxes.filter(x=>x.b.dataset.on==="1");
+      const shouldBeOk = cfg.items.filter(x=>x.ok);
+      const isRight = chosenOk.length===shouldBeOk.length && chosenOk.every(x=>x.it.ok);
+      boxes.forEach(x=>{
+        x.b.dataset.locked=1; x.b.disabled=true;
+        if(x.it.ok) x.b.classList.add("ok");
+        else if(x.b.dataset.on==="1") x.b.classList.add("err");
+      });
+      $("checkBtn").disabled=true;
+      if(isRight){
+        addStar(); bit(cfg.win); onDone();
+      } else {
+        mistakes++; bit(cfg.fail);
+        const again=document.createElement("button");
+        again.className="btn ghost sm"; again.style.marginTop="12px";
+        again.textContent="Спробувати ще раз ↺";
+        again.onclick=()=>multiQuestion(cfg,onDone);
+        stage.appendChild(again);
+      }
+    };
+  }
+
+  // ═══════════════ РАУНД 1 — Метадані у файлі (питання 1–3) ═══════════════
+  function round1(){
+    bit("Файл .docx усередині влаштований не так, як здається. Три питання про те, що там насправді.");
+    const qs=[
+      { task:"Питання 1 з 3",
+        q:"Файл <code>.docx</code> за своєю будовою — це:",
+        opts:[
+          {t:"ZIP-архів із кількох файлів", ok:true},
+          {t:"один суцільний текстовий файл"},
+          {t:"зображення сторінок документа"},
+          {t:"база даних"},
+        ], win:"Так, .docx — це архів ✅" },
+      { task:"Питання 2 з 3",
+        q:"Разом із файлом <code>.docx</code> до іншої людини поїдуть <b>(познач усі правильні)</b>:",
+        multi:true,
+        items:[
+          {n:"ім'я автора й того, хто змінював документ останнім", ok:true},
+          {n:"дати створення та останньої зміни", ok:true},
+          {n:"коментарі й примітки, яких не видно в тексті", ok:true},
+          {n:"пароль вашого акаунта", ok:false, note:"пароль ніде в самому документі не зберігається"},
+          {n:"інші файли з вашого комп'ютера", ok:false, note:"у файл потрапляють дані цього документа, а не диска"},
+        ], win:"Точно — усі три ✅", fail:"Тут потрібні рівно ТРИ правильні, без жодної зайвої. Перевір ще раз." },
+      { task:"Питання 3 з 3",
+        q:"Ти завантажив з інтернету готовий шаблон резюме, змінив у ньому текст і надіслав. Що побачить одержувач у властивостях файла?",
+        opts:[
+          {t:"ім'я того, хто зробив шаблон, — і твоє як того, хто змінював останнім", ok:true},
+          {t:"тільки твоє ім'я"},
+          {t:"нічого: після зміни тексту всі дані стираються"},
+          {t:"назву сайту, з якого завантажено шаблон"},
+        ], win:"Раунд 1 пройдено \u{1F4C4}" },
+    ];
+    runSequence(qs);
+  }
+
+  // ═══════════════ РАУНД 2 — PDF: міф і правда (питання 4–6) ═══════════════
+  function round2(){
+    bit("Про PDF існує міф. Перевіримо, що він захищає насправді.");
+    const qs=[
+      { task:"Питання 1 з 3",
+        q:"«Я зберіг документ у <code>PDF</code>, значить його не змінять і текст не витягнуть». Це:",
+        opts:[
+          {t:"неправда: текст із PDF копіюється, PDF редагується, і метадані в ньому теж є", ok:true},
+          {t:"правда: PDF захищений від будь-яких змін"},
+          {t:"правда, якщо не ставити пароль"},
+          {t:"правда для PDF, створеного з Word"},
+        ], win:"Саме так ✅" },
+      { task:"Питання 2 з 3",
+        q:"Що насправді захищає формат <code>PDF</code>?",
+        opts:[
+          {t:"вигляд документа, а не його вміст", ok:true},
+          {t:"вміст документа від копіювання"},
+          {t:"документ від відкривання без пароля"},
+          {t:"ім'я автора від сторонніх очей"},
+        ], win:"Правильно ✅" },
+      { task:"Питання 3 з 3",
+        q:"Чому для надсилання документа незнайомій людині все ж радять <code>PDF</code>?",
+        opts:[
+          {t:"бо вигляд буде однаковий у всіх і бо PDF не несе з собою коментарів та правок", ok:true},
+          {t:"бо PDF найменший за розміром"},
+          {t:"бо PDF неможливо відкрити без спеціальної програми"},
+          {t:"бо PDF не містить жодних метаданих"},
+        ], win:"Раунд 2 пройдено \u{1F4C4}" },
+    ];
+    runSequence(qs);
+  }
+
+  // ═══════════════ РАУНД 3 — Що варто, а що ні (питання 7–8) ═══════════════
+  function round3(){
+    bit("Два питання про рішення, а не про кнопки.");
+    const qs=[
+      { task:"Питання 1 з 2",
+        q:"Чого з переліченого робити <b>не варто</b>?",
+        opts:[
+          {t:"вставляти чужий документ (медичну довідку, лист, документи батьків) у безкоштовний онлайн-перекладач", ok:true},
+          {t:"зберігати свій документ у PDF перед надсиланням"},
+          {t:"перевіряти властивості файла, взятого з чужого шаблону"},
+          {t:"видаляти примітки перед тим, як надіслати документ"},
+        ], win:"Правильно ✅" },
+      { task:"Питання 2 з 2",
+        q:"Ти диктував текст голосом у практичній роботі № 1. Куди йшов звук?",
+        opts:[
+          {t:"на сервер, де його розпізнавали, — а не тільки у твій комп'ютер", ok:true},
+          {t:"нікуди: усе відбувалося у твоєму комп'ютері"},
+          {t:"у файл на твоєму диску, а потім видалявся"},
+          {t:"у мікрофон і назад у навушники"},
+        ], win:"Раунд 3 пройдено \u{1F4C4}" },
+    ];
+    runSequence(qs);
+  }
+
+  // ═══════════════ РАУНД 4 — Колонтитул і слід (питання 9–10) ═══════════════
+  function round4(){
+    bit("Останній раунд. Два найважчі питання роботи.");
+    const qs=[
+      { task:"Питання 1 з 2",
+        q:"Ти поставив своє <b>прізвище</b> в нижній колонтитул документа й виклав документ у відкритий чат класу. Що ти зробив?",
+        opts:[
+          {t:"поставив своє прізвище на кожну сторінку документа й показав його всім, хто має доступ до чату", ok:true},
+          {t:"нічого особливого: колонтитул усе одно не друкується"},
+          {t:"захистив документ від того, щоб його присвоїли"},
+          {t:"показав прізвище лише на першій сторінці"},
+        ], win:"Точно ✅" },
+      { task:"Питання 2 з 2",
+        q:"У службових даних файла написано, що його створено в програмі <code>Microsoft Macintosh Word</code>, хоча насправді це не так. Правильний висновок:",
+        opts:[
+          {t:"метадані — це слід, а не свідчення: вони можуть бути неточними або успадкованими від шаблону, тому за ними не можна нікого звинувачувати", ok:true},
+          {t:"файл підроблено"},
+          {t:"документ справді робили на Mac"},
+          {t:"комп'ютер помилився, і файл треба видалити"},
+        ], win:"Усі 10 питань пройдено! Тисни «Фінал» \u{1F3C1}" },
+    ];
+    runSequence(qs);
+  }
+
+  // ── Виконати список питань раунду по черзі ──
+  function runSequence(qs){
+    let i=0;
+    const step=()=>{
+      const cfg=qs[i];
+      const advance=()=>{ i++; if(i<qs.length){ setTimeout(step,550); } else { done(); } };
+      if(cfg.multi) multiQuestion(cfg, advance);
+      else singleQuestion(cfg, advance);
+    };
+    step();
+    lockNext();
+  }
+
+  // ═══════════════ Фінал ═══════════════
+  function finale(){
+    dotsEl.querySelectorAll("i").forEach(d=>d.className="done");
+    document.querySelector(".card .actions").style.display="none";
+    const earned = Math.max(0, MAX - mistakes);
+    say.innerHTML="Зберігаю твій результат… ⏳";
+    stage.innerHTML='<div class="win"><div class="big">⏳</div><h2>Рахуємо…</h2></div>';
+    const finish = (remaining, note) => {
+      const canRetry = remaining > 0;
+      say.innerHTML="Закриту частину підсумкової роботи ГР 4 завершено! \u{1F389}";
+      stage.innerHTML=`<div class="win">
+        <div class="big">\u{1F4C4}</div>
+        <h2>Готово!</h2>
+        <div class="score">⭐ ${earned} / ${MAX} правильних (з 10 закритих питань)</div>
+        <p>${note}</p>
+        <p style="opacity:.85;font-size:14px">⚠️ Це <b>не</b> остаточна оцінка за ГР 4. До неї ще додасться до <b>2 балів</b> за
+        відкрите питання № 11 — те, яке ти написав текстом окремо (у Classroom, перевіряє вчитель).
+        Максимум за ГР 4 разом — <b>12</b>.</p>
+        ${canRetry ? '<button class="btn" id="again">Спробувати ще раз ↺</button>' : '<button class="btn ghost" id="home">Вийти ↩</button>'}
+      </div>`;
+      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; starsEl.textContent=0;
+        document.querySelector(".card .actions").style.display="flex";
+        nextBtn.textContent="Почати →"; nextBtn.disabled=false; paintDots();
+        say.innerHTML="Ще спроба — читай уважніше \u{1F680}"; stage.innerHTML=""; };
+      const home=$("home"); if(home) home.onclick=()=>{ location.href="../index.html"; };
+    };
+    if(window.submitResult){
+      window.submitResult(earned).then(res=>{
+        if(res && res.ok){
+          finish((res.remaining!=null?res.remaining:0),
+            (res.remaining>0 ? ("Залишилось спроб: "+res.remaining+" — можеш покращити.") : "Спроби використано. Зараховано найкращий результат."));
+        } else if(res && res.error && /вичерпано/i.test(res.error)){
+          finish(0, "Ти вже використав усі спроби.");
+        } else {
+          finish(0, "Не вдалося зберегти — покажи результат учителю.");
+        }
+      }).catch(()=>finish(0,"Не вдалося зберегти — покажи результат учителю."));
+    } else {
+      finish(0, "Демо-режим.");
+    }
+  }
+
+  // ═══════════════ Керування раундами ═══════════════
+  const rounds=[round1,round2,round3,round4];
+  function lockNext(){ nextBtn.disabled=true; nextBtn.textContent="Виконуй завдання…"; }
+  function done(){ nextBtn.disabled=false; nextBtn.textContent = round<TOTAL_ROUNDS-1 ? "Далі →" : "Фінал \u{1F3C1}"; }
+
+  nextBtn.onclick=()=>{
+    if(round>=TOTAL_ROUNDS){ return; }
+    if(nextBtn.textContent.startsWith("Почати") || nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")){
+      if(nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")) round++;
+      if(round>=TOTAL_ROUNDS){ finale(); return; }
+      paintDots(); rounds[round]();
+    }
+  };
+  paintDots();
+})();
+</script>
+</body>
+</html>

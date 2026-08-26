@@ -139,7 +139,8 @@
           <b>Найкращі результати</b>
           <button class="btn ghost sm" id="exportCsv">Експорт CSV</button>
         </div>
-        <table style="margin-top:8px"><thead><tr><th>Клас</th><th>ПІБ</th><th>Гра</th><th>Кращий бал</th><th>%</th><th>Спроб</th></tr></thead><tbody id="resBody"></tbody></table>
+        <table style="margin-top:8px"><thead><tr><th>Клас</th><th>ПІБ</th><th>Гра</th><th>Очки в грі</th><th>Кращий бал</th><th>%</th><th>Спроб</th></tr></thead><tbody id="resBody"></tbody></table>
+        <p class="muted" style="margin-top:6px">«Очки в грі» — сирий рахунок (правильних / максимум) без округлення в шкалу 1-12. Потрібно, якщо частину оцінки додаєте вручну (напр. відкрите питання поза грою).</p>
         <div id="resMsg" class="msg"></div>
       </div>
     </div>
@@ -296,25 +297,25 @@ el('genCodes').onclick = async () => {
 let summaryRows=[];
 async function loadResults(){
   const { data, error } = await sb.from('results')
-    .select('grade,pct,students(full_name,class_label),games(title)')
+    .select('grade,pct,score,max_score,students(full_name,class_label),games(title)')
     .order('created_at',{ascending:false});
   if(error){ msg('resMsg', error.message, 'err'); return; }
   const map = {};
   (data||[]).forEach(r=>{
     const cls=r.students?.class_label||'', pib=r.students?.full_name||'', game=r.games?.title||'';
     const k=cls+'|'+pib+'|'+game;
-    if(!map[k]) map[k]={cls,pib,game,grade:r.grade||0,pct:r.pct||0,n:1};
-    else{ map[k].n++; if((r.grade||0)>map[k].grade){map[k].grade=r.grade;map[k].pct=r.pct;} }
+    if(!map[k]) map[k]={cls,pib,game,grade:r.grade||0,pct:r.pct||0,score:r.score||0,maxScore:r.max_score||0,n:1};
+    else{ map[k].n++; if((r.grade||0)>map[k].grade){map[k].grade=r.grade;map[k].pct=r.pct;map[k].score=r.score;map[k].maxScore=r.max_score;} }
   });
   summaryRows = Object.values(map).sort((a,b)=>(a.cls+a.game+a.pib).localeCompare(b.cls+b.game+b.pib));
   el('resBody').innerHTML = summaryRows.length
     ? summaryRows.map(r=>`<tr><td>${esc(r.cls)}</td><td>${esc(r.pib)}</td><td>${esc(r.game)}</td>
-        <td><b>${r.grade}</b></td><td>${r.pct}%</td><td>${r.n}</td></tr>`).join('')
-    : '<tr><td colspan="6" class="muted">Поки що немає результатів.</td></tr>';
+        <td>${r.score} / ${r.maxScore}</td><td><b>${r.grade}</b></td><td>${r.pct}%</td><td>${r.n}</td></tr>`).join('')
+    : '<tr><td colspan="7" class="muted">Поки що немає результатів.</td></tr>';
 }
 el('exportCsv').onclick = () => {
-  const head = ['Клас','ПІБ','Гра','Бал','Відсоток','Спроб'];
-  const lines = [head.join(';')].concat(summaryRows.map(r=>[r.cls,r.pib,r.game,r.grade,r.pct,r.n].join(';')));
+  const head = ['Клас','ПІБ','Гра','Очки в грі','Максимум','Бал','Відсоток','Спроб'];
+  const lines = [head.join(';')].concat(summaryRows.map(r=>[r.cls,r.pib,r.game,r.score,r.maxScore,r.grade,r.pct,r.n].join(';')));
   const blob = new Blob(['﻿'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='rezultaty.csv'; a.click();
 };

@@ -121,7 +121,20 @@ on conflict (slug) do update
       description = excluded.description,
       max_score   = excluded.max_score;
 
--- ПЕРЕВІРКА: має повернути 9 рядків (8 звідси + naved-lad зі схеми)
+-- 15_game_metadani_9.sql  (max_score = 10, ПІЛОТНА гра для 9 класу)
+insert into public.games (slug, title, description, max_score)
+values (
+  'metadani-9',
+  '9 клас · Метадані файлу',
+  'Що їде разом із файлом .docx і PDF: автор, дати, коментарі, колонтитул. 10 закритих питань з 12 (ще 2 бали — за письмову відповідь окремо в Classroom, вручну) — ГР 4, 9 клас, уроки 9-10',
+  10
+)
+on conflict (slug) do update
+  set title       = excluded.title,
+      description = excluded.description,
+      max_score   = excluded.max_score;
+
+-- ПЕРЕВІРКА: має повернути 10 рядків (9 звідси + naved-lad зі схеми)
 select slug, title, max_score, active
 from public.games
 order by slug;
