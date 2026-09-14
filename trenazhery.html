@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Тренажери за класами — інформатика</title>
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/slides.css">
+<script src="assets/theme.js"></script>
+<style>
+  /* тільки те, що є лише на цій сторінці */
+  .tool .who{align-self:flex-start; font-family:var(--mono); font-size:var(--fs-xs);
+    font-weight:700; color:var(--accent); background:var(--accent-soft);
+    border-radius:var(--r-sm); padding:3px var(--s2)}
+  .tool .ttitle{font-size:var(--fs-body); font-weight:650; line-height:1.35}
+  .tool .tdesc{color:var(--ink-2); font-size:var(--fs-sm); line-height:1.5}
+  .tool .tmods{display:flex; flex-wrap:wrap; gap:var(--s2); margin-top:var(--s2)}
+  .tool .tmod{font-family:var(--mono); font-size:var(--fs-xs); color:var(--ink-3);
+    border:1px solid var(--line); border-radius:var(--r-sm); padding:2px var(--s2)}
+  /* ⚠️ кнопка притиснута донизу, щоб у карток з описами різної довжини
+     «Відкрити» стояло на одній лінії */
+  .tool .lacts{margin-top:auto}
+  .note{color:var(--ink-3); font-size:var(--fs-xs); line-height:1.6;
+    margin-bottom:var(--s5)}
+</style>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" data-head-v1>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="author" content="Процюк О. К.">
+<meta name="description" content="Навчальні тренажери з інформатики за класами: інтерактивні сторінки, де можна покрутити, спробувати й побачити, як щось працює. Без входу й без оцінок.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Тренажери">
+<meta property="og:locale" content="uk_UA">
+<meta property="og:title" content="Тренажери за класами — інформатика">
+<meta property="og:description" content="Інтерактивні тренажери за класами й темами. Відкриваються просто в браузері, без входу й без оцінок.">
+<meta property="og:url" content="https://hg47.github.io/school-games/trenazhery.html">
+<meta property="og:image" content="https://hg47.github.io/school-games/og-cover.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+<body data-techbg>
+
+<div class="wrap">
+  <a class="backlink" href="index.html">← на головну</a>
+
+  <div class="hero">
+    <div class="hero-head">
+      <div class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M3 7.5h8.5a3.5 3.5 0 1 1 0 1H3zM13 8a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0-5 0z"/>
+          <path d="M21 16.5h-8.5a3.5 3.5 0 1 0 0-1H21zM11 16a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z" opacity=".8"/>
+        </svg>
+      </div>
+      <h1>Тренажери</h1>
+    </div>
+    <p class="lede">Сторінки, де тему можна <b>покрутити руками</b>: увімкнути,
+      перемкнути, набрати — і побачити, що з цього вийде. Працюють
+      <b>просто тут, у браузері</b>: входити нікуди не треба, оцінок за них немає,
+      і ніде нічого не зберігається.</p>
+  </div>
+
+  <div class="chips" id="chips" hidden></div>
+  <div id="list"></div>
+  <div class="empty" id="empty" hidden></div>
+
+  <p class="note">⭐ Тренажер — це <b>не контрольна</b>. Можна тиснути будь-що,
+    помилятися скільки завгодно й починати спочатку: результат нікуди не йде
+    і ні на що не впливає.
+    <br>⚠️ Сторінка нічого про вас не запитує й не запам'ятовує — усе рахується
+    у вашому ж браузері.
+    <br>Докладніше про дані цього сайту — <a class="doclink" data-doc href="about.html">Про сайт і дані</a>.</p>
+
+  <footer data-sig>
+    © 2025–2026 <b>Процюк О. К.</b> · вчитель інформатики<br>
+    Комунальний заклад «Харківський ліцей № 47 Харківської міської ради»
+    <br><a class="doclink" data-doc href="about.html">Про сайт і дані</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     ПЕРЕЛІК ТРЕНАЖЕРІВ — єдине місце, яке правиться при додаванні нового.
+
+     Один тренажер — один рядок. Поля:
+       cls   — клас РІВНО так, як у каталозі презентацій і помічників:
+               "5-й", "6-й", "7-й", "8-й", "9-й", "10-й" — без літери групи.
+               ⚠️ Від цього залежить фільтр, і вибір класу спільний із
+               `materials.html` та `gems.html` через localStorage `school-class`.
+       topic — тема (йде в плашку над назвою)
+       title — назва, яку побачить учень
+       desc  — один-два рядки, що з ним робити
+       mods  — [необов'язково] перелік вкладок/модулів усередині
+       url   — шлях на цьому ж сайті, напр. "tools/bity-8.html"
+
+     ⛔ Сюди НЕ виносити нічого, що містить відповіді до підсумкових робіт:
+        сторінка відкрита без коду, її бачить будь-хто.
+     ⭐ Порядок у масиві не має значення — сортується сам: клас, потім тема.
+     ═══════════════════════════════════════════════════════════════════════ */
+  const TOOLS = [
+    {
+      cls: "8-й",
+      topic: "Тема 1. Кодування та архіви даних",
+      title: "Двійкове кодування",
+      desc: "Покрутити вісім перемикачів і побачити, як із бітів складається число; " +
+            "подивитися, звідки беруться комбінації 00, 01, 10, 11; набрати будь-який " +
+            "текст і дізнатися, скільки в ньому символів, байтів і бітів.",
+      mods: ["Біти", "Подвоєння", "Гра", "Текст → код", "Одиниці"],
+      url: "tools/bity-8.html"
+    }
+  ];
+  /* ══════════════════ далі правити не потрібно ══════════════════════════ */
+
+  const $ = id => document.getElementById(id);
+  // ⭐ Ключ спільний із каталогом презентацій і помічників: учень обирає свій
+  // клас один раз, і це діє на всіх трьох сторінках.
+  const KEY = "school-class";
+  const esc = s => String(s).replace(/[&<>"]/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  const plural = n => {
+    const t = n % 100, o = n % 10;
+    if (t >= 11 && t <= 14) return "тренажерів";
+    if (o === 1) return "тренажер";
+    if (o >= 2 && o <= 4) return "тренажери";
+    return "тренажерів";
+  };
+
+  if (!TOOLS.length) {
+    $("empty").innerHTML = "Тренажерів поки що <b>немає</b> — вони з’являться згодом.<br><br>" +
+      '<a class="btn" href="index.html">На головну →</a>';
+    $("empty").hidden = false;
+    return;
+  }
+
+  // ⚠️ Порядок класів — ЧИСЛОМ, не рядком: інакше «10-й» стає перед «5-й».
+  const num = c => { const m = c.match(/\d+/); return m ? +m[0] : 99; };
+  const byClass = (a, b) => num(a) - num(b) || a.localeCompare(b, "uk");
+
+  const classes = [...new Set(TOOLS.map(t => t.cls))].sort(byClass);
+  let pick = null;
+  try { pick = localStorage.getItem(KEY); } catch (e) {}
+  if (!classes.includes(pick)) pick = classes.length === 1 ? classes[0] : null;
+
+  const chips = $("chips");
+  chips.hidden = classes.length < 2;
+  const mk = (label, val) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = label;
+    b.dataset.val = val || "";
+    b.onclick = () => {
+      pick = val;
+      try { localStorage.setItem(KEY, val || ""); } catch (e) {}
+      draw();
+    };
+    chips.appendChild(b);
+  };
+  mk("усі класи", null);
+  classes.forEach(c => mk(c, c));
+
+  const card = t => '<article class="lesson tool">' +
+    '<span class="who">' + esc(t.topic) + "</span>" +
+    '<div class="ttitle">' + esc(t.title) + "</div>" +
+    '<div class="tdesc">' + esc(t.desc) + "</div>" +
+    (t.mods && t.mods.length
+      ? '<div class="tmods">' +
+        t.mods.map(m => '<span class="tmod">' + esc(m) + "</span>").join("") +
+        "</div>"
+      : "") +
+    '<div class="lacts"><a class="btn" href="' + esc(t.url) +
+    '">Відкрити →</a></div></article>';
+
+  function draw() {
+    [...chips.children].forEach(b =>
+      b.setAttribute("aria-pressed", (b.dataset.val || null) === pick ? "true" : "false"));
+
+    const show = (pick ? TOOLS.filter(t => t.cls === pick) : TOOLS.slice())
+      .sort((a, b) => byClass(a.cls, b.cls) || a.topic.localeCompare(b.topic, "uk"));
+
+    const html = [];
+    let cls = null;
+    for (const t of show) {
+      if (t.cls !== cls) {
+        if (cls !== null) html.push("</div></section>");
+        const n = show.filter(x => x.cls === t.cls).length;
+        html.push('<section class="group"><div class="grouptop"><h2>' + esc(t.cls) +
+          '</h2><span class="cnt">' + n + " " + plural(n) + "</span></div>" +
+          '<div class="lessons">');
+        cls = t.cls;
+      }
+      html.push(card(t));
+    }
+    if (cls !== null) html.push("</div></section>");
+    $("list").innerHTML = html.join("");
+  }
+
+  draw();
+})();
+</script>
+</body>
+</html>

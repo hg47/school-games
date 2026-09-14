@@ -1,0 +1,805 @@
+<title>Двійкове кодування — 8 клас</title>
+<meta name="description" content="Інтерактивний пульт для теми «Двійкове кодування»: біти-перемикачі, гра «Збери число», кодування тексту в Unicode/UTF-8 та одиниці вимірювання даних.">
+<style>
+  /* ── Токени: тема за замовчуванням (темний «пульт») ── */
+  :root {
+    --bg: #0f1720;
+    --surface: #16212e;
+    --surface-2: #1d2b3b;
+    --raised: #22344a;
+    --border: #2c3e53;
+    --border-soft: #223141;
+    --text: #e7eef5;
+    --text-dim: #8ea0b3;
+    --text-faint: #5f7386;
+    --accent: #f6a723;          /* янтарний LED — головний акцент */
+    --accent-strong: #ffbe4d;
+    --accent-ink: #1a1206;      /* текст на янтарному */
+    --accent-glow: rgba(246,167,35,.55);
+    --off: #2a3a4c;             /* вимкнений біт */
+    --off-face: #56697c;
+    --good: #35d29a;
+    --good-ink: #05271b;
+    --bad: #f2717d; --n-zero: #6cb8ff;
+    --shadow: rgba(0,0,0,.45);
+    --mono: "Cascadia Code", "Cascadia Mono", "JetBrains Mono", "SF Mono", ui-monospace, "Consolas", monospace;
+    --sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #eaeef4;
+      --surface: #ffffff;
+      --surface-2: #f2f6fb;
+      --raised: #e9eff6;
+      --border: #d3dde8;
+      --border-soft: #e2e9f1;
+      --text: #16232f;
+      --text-dim: #566878;
+      --text-faint: #8497a7;
+      --accent: #d9860a;
+      --accent-strong: #b96f00;
+      --accent-ink: #fff7e9;
+      --accent-glow: rgba(217,134,10,.35);
+      --off: #d3dde7;
+      --off-face: #9aa9b8;
+      --good: #12a97a;
+      --good-ink: #ffffff;
+      --bad: #d1495b; --n-zero: #1f6fe0;
+      --shadow: rgba(31,50,72,.14);
+    }
+  }
+  /* Явний перемикач теми глядача має перемагати media-query в обидва боки */
+  :root[data-theme="dark"] {
+    --bg: #0f1720; --surface: #16212e; --surface-2: #1d2b3b; --raised: #22344a;
+    --border: #2c3e53; --border-soft: #223141; --text: #e7eef5; --text-dim: #8ea0b3;
+    --text-faint: #5f7386; --accent: #f6a723; --accent-strong: #ffbe4d; --accent-ink: #1a1206;
+    --accent-glow: rgba(246,167,35,.55); --off: #2a3a4c; --off-face: #56697c;
+    --good: #35d29a; --good-ink: #05271b; --bad: #f2717d; --n-zero: #6cb8ff; --shadow: rgba(0,0,0,.45);
+  }
+  :root[data-theme="light"] {
+    --bg: #eaeef4; --surface: #ffffff; --surface-2: #f2f6fb; --raised: #e9eff6;
+    --border: #d3dde8; --border-soft: #e2e9f1; --text: #16232f; --text-dim: #566878;
+    --text-faint: #8497a7; --accent: #d9860a; --accent-strong: #b96f00; --accent-ink: #fff7e9;
+    --accent-glow: rgba(217,134,10,.35); --off: #d3dde7; --off-face: #9aa9b8;
+    --good: #12a97a; --good-ink: #ffffff; --bad: #d1495b; --n-zero: #1f6fe0; --shadow: rgba(31,50,72,.14);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: clamp(18px, 4vw, 40px) clamp(14px, 4vw, 28px) 56px; }
+
+  /* ── Шапка ── */
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .eyebrow::before { content: ""; width: 22px; height: 2px; background: var(--accent); display: inline-block; }
+  h1 {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(30px, 6vw, 46px);
+    letter-spacing: -.01em;
+    margin: 12px 0 6px;
+    text-wrap: balance;
+  }
+  .lede { color: var(--text-dim); max-width: 60ch; margin: 0; font-size: clamp(15px, 2.2vw, 17px); }
+
+  /* ── Таби ── */
+  .tabs {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin: 26px 0 20px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+  .tab {
+    appearance: none; border: 0; background: transparent; cursor: pointer;
+    font-family: var(--mono); font-size: 14px; font-weight: 600;
+    color: var(--text-dim);
+    padding: 10px 14px; border-radius: 9px 9px 0 0;
+    position: relative;
+    transition: color .15s ease, background .15s ease;
+  }
+  .tab:hover { color: var(--text); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .tab[aria-selected="true"] { color: var(--accent); }
+  .tab[aria-selected="true"]::after {
+    content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px;
+    background: var(--accent); border-radius: 2px;
+  }
+  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .panel { display: none; animation: fade .25s ease; }
+  .panel.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .panel { animation: none; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: clamp(16px, 3vw, 26px);
+    box-shadow: 0 1px 0 var(--border-soft), 0 18px 40px -30px var(--shadow);
+  }
+  .card + .card { margin-top: 16px; }
+  .card h2 {
+    font-family: var(--mono); font-size: 15px; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--text-dim); margin: 0 0 4px; font-weight: 700;
+  }
+  .card .hint { color: var(--text-faint); font-size: 14px; margin: 0 0 18px; }
+
+  /* ── Банк перемикачів ── */
+  .bitbank-scroll { overflow-x: auto; padding-bottom: 6px; }
+  .bitbank {
+    display: flex; gap: clamp(6px, 1.6vw, 12px); justify-content: center; min-width: max-content; margin: 0 auto;
+  }
+  .bitcol { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .place {
+    font-family: var(--mono); font-size: 12px; color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .place b { color: var(--text-dim); font-weight: 700; }
+  .sw {
+    appearance: none; border: 1px solid var(--border); cursor: pointer;
+    width: clamp(44px, 8vw, 58px); height: clamp(84px, 15vw, 104px);
+    border-radius: 12px; background: var(--surface-2);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 8px 0; gap: 8px;
+    position: relative; transition: border-color .15s ease, background .15s ease;
+  }
+  .sw:hover { border-color: var(--accent); }
+  .sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .led {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--off); border: 1px solid var(--border);
+    transition: background .18s ease, box-shadow .18s ease;
+  }
+  .knob {
+    width: 60%; height: 40%; border-radius: 8px;
+    background: linear-gradient(180deg, var(--off-face), color-mix(in srgb, var(--off-face) 60%, #000));
+    margin-top: auto; align-self: center;
+    transform: translateY(0); transition: transform .18s ease, background .18s ease;
+    box-shadow: 0 2px 4px var(--shadow);
+  }
+  .digit {
+    font-family: var(--mono); font-weight: 700; font-size: 20px;
+    color: var(--off-face); transition: color .18s ease;
+  }
+  .sw[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 14%, var(--surface-2)); border-color: var(--accent); }
+  .sw[aria-pressed="true"] .led { background: var(--accent); box-shadow: 0 0 12px 2px var(--accent-glow); border-color: var(--accent-strong); }
+  .sw[aria-pressed="true"] .knob { transform: translateY(calc(-1 * clamp(28px, 5.4vw, 40px))); background: linear-gradient(180deg, var(--accent-strong), var(--accent)); }
+  .sw[aria-pressed="true"] .digit { color: var(--accent); }
+  @media (prefers-reduced-motion: reduce) { .led, .knob, .digit { transition: none; } }
+
+  /* ── Читання значення ── */
+  .readout {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;
+    margin-top: 22px;
+  }
+  .ro {
+    background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .ro .k { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-faint); }
+  .ro .v { font-family: var(--mono); font-weight: 700; font-size: clamp(26px, 5vw, 34px); color: var(--accent); font-variant-numeric: tabular-nums; margin-top: 2px; word-break: break-all; }
+  .ro .v.plain { color: var(--text); }
+  .formula {
+    font-family: var(--mono); font-size: 14px; color: var(--text-dim);
+    margin-top: 18px; padding: 14px 16px; background: var(--surface-2);
+    border: 1px dashed var(--border); border-radius: 12px; overflow-x: auto; line-height: 1.9;
+  }
+  .formula b { color: var(--accent); }
+
+  /* ── Кнопки ── */
+  .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+  .btn {
+    appearance: none; cursor: pointer; font-family: var(--mono); font-weight: 600; font-size: 14px;
+    padding: 9px 16px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text); transition: all .15s ease;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-ink); }
+
+  /* ── Подвоєння (дерево) ── */
+  .tree-wrap { overflow-x: auto; padding: 10px 2px 4px; margin-top: 20px; }
+  #tree { display: flex; gap: 26px; justify-content: center; min-width: min-content; }
+  .tnode { position: relative; display: flex; flex-direction: column; align-items: center; }
+  .tbox {
+    font-family: var(--mono); font-weight: 700; font-size: clamp(16px, 2.6vw, 22px);
+    letter-spacing: .08em; white-space: nowrap; cursor: pointer; color: var(--text);
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 5px 11px; transition: all .15s ease;
+  }
+  .tbox:hover { border-color: var(--accent); }
+  .tbox:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tbox .o { color: var(--text-faint); }
+  .tbox .n0 { color: var(--n-zero); border-bottom: 3px solid var(--n-zero); }
+  .tbox .n1 { color: var(--good); border-bottom: 3px solid var(--good); }
+  .tnode.fresh > .tbox {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  .tnode.onpath > .tbox {
+    background: color-mix(in srgb, var(--accent) 16%, var(--surface-2));
+    border-color: var(--accent);
+  }
+  .tkids { display: flex; gap: 12px; position: relative; margin-top: 22px; }
+  .tkids::before { content: ""; position: absolute; top: -22px; left: calc(50% - 1px);
+                   width: 2px; height: 11px; background: var(--border); }
+  .tkids::after  { content: ""; position: absolute; top: -11px; left: 25%; right: 25%;
+                   height: 2px; background: var(--border); }
+  .tkids > .tnode::before { content: ""; position: absolute; top: -11px; left: calc(50% - 1px);
+                            width: 2px; height: 11px; background: var(--border); }
+  .ttrace {
+    font-family: var(--mono); font-size: 14px; color: var(--text-dim);
+    margin-top: 14px; padding: 14px 16px; background: var(--surface-2);
+    border: 1px solid var(--n-zero); border-radius: 12px; line-height: 1.9; display: none;
+  }
+  .ttrace b { color: var(--accent); }
+  .ttrace code { color: var(--text); background: var(--raised);
+                 border-radius: 5px; padding: 1px 6px; }
+
+  /* ── Гра ── */
+  .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 3px; }
+  .seg button {
+    appearance: none; border: 0; background: transparent; cursor: pointer;
+    font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text-dim);
+    padding: 7px 14px; border-radius: 7px; transition: all .15s ease;
+  }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .scoreboard { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 6px; }
+  .stat { flex: 1 1 120px; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: 12px; padding: 12px 14px; }
+  .stat .k { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
+  .stat .v { font-family: var(--mono); font-weight: 700; font-size: 26px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .target {
+    text-align: center; margin: 8px 0 6px;
+  }
+  .target .lbl { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-faint); }
+  .target .num { font-family: var(--mono); font-weight: 700; font-size: clamp(44px, 12vw, 76px); color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; }
+  .verdict { text-align: center; font-family: var(--mono); font-weight: 600; min-height: 26px; margin-top: 6px; }
+  .verdict.hit { color: var(--good); }
+  .verdict.warm { color: var(--accent); }
+  .verdict.miss { color: var(--bad); }
+  .num-in {
+    font-family: var(--mono); font-size: 22px; font-weight: 700; text-align: center;
+    width: 140px; padding: 10px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text);
+  }
+  .num-in:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
+  .center { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+
+  /* ── Текст → код ── */
+  textarea {
+    width: 100%; min-height: 84px; resize: vertical;
+    font-family: var(--sans); font-size: 16px; padding: 12px 14px;
+    border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  }
+  textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
+  .table-scroll { overflow-x: auto; margin-top: 18px; border-radius: 12px; border: 1px solid var(--border-soft); }
+  table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border-soft); white-space: nowrap; }
+  th { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-faint); font-weight: 700; background: var(--surface-2); position: sticky; top: 0; }
+  td.ch { font-weight: 700; font-size: 18px; }
+  td.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: 0; }
+  .badge { font-family: var(--mono); font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .badge.b1 { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good); }
+  .badge.b2 { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); }
+  .badge.b3 { background: color-mix(in srgb, var(--bad) 22%, transparent); color: var(--bad); }
+  .sumline { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+
+  /* ── Одиниці ── */
+  .conv-in { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .conv-in input {
+    font-family: var(--mono); font-size: 20px; font-weight: 700; width: 160px; padding: 10px 12px;
+    border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  }
+  .conv-in input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
+  select {
+    font-family: var(--mono); font-size: 15px; font-weight: 600; padding: 10px 12px;
+    border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); cursor: pointer;
+  }
+  .conv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 18px; }
+  .conv-cell { background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: 12px; padding: 12px 14px; }
+  .conv-cell .k { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
+  .conv-cell .v { font-family: var(--mono); font-weight: 700; font-size: 20px; color: var(--text); font-variant-numeric: tabular-nums; word-break: break-all; }
+  .conv-cell.hi { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface-2)); }
+  .conv-cell.hi .v { color: var(--accent); }
+  .intuition { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 16px; }
+  .intu { display: flex; gap: 12px; align-items: flex-start; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: 12px; padding: 14px; }
+  .intu .ic { font-size: 22px; line-height: 1; }
+  .intu .t { font-size: 14px; color: var(--text-dim); }
+  .intu .t b { color: var(--text); font-family: var(--mono); }
+
+  footer { margin-top: 30px; color: var(--text-faint); font-size: 13px; text-align: center; font-family: var(--mono); }
+
+  /* Утиліти */
+  .flex-between { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+  .tip { font-size: 13px; color: var(--text-faint); margin-top: 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Інформатика · 8 клас · Тема 1</div>
+    <h1>Двійкове кодування</h1>
+    <p class="lede">Пульт для експериментів: клацай біти, збирай числа, дивись, як текст перетворюється на нулі й одиниці, і скільки місця займають дані.</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Модулі">
+    <button class="tab" role="tab" id="tab-bits" aria-controls="panel-bits" aria-selected="true">Біти</button>
+    <button class="tab" role="tab" id="tab-tree" aria-controls="panel-tree" aria-selected="false">Подвоєння</button>
+    <button class="tab" role="tab" id="tab-game" aria-controls="panel-game" aria-selected="false">Гра</button>
+    <button class="tab" role="tab" id="tab-text" aria-controls="panel-text" aria-selected="false">Текст → код</button>
+    <button class="tab" role="tab" id="tab-units" aria-controls="panel-units" aria-selected="false">Одиниці</button>
+  </div>
+
+  <!-- ─────────────── БІТИ ─────────────── -->
+  <section class="panel active" id="panel-bits" role="tabpanel" aria-labelledby="tab-bits">
+    <div class="card">
+      <h2>Байт із 8 бітів</h2>
+      <p class="hint">Кожен перемикач — це один біт. Угорі написано, скільки він «важить». Увімкнені біти додаються.</p>
+      <div class="bitbank-scroll">
+        <div class="bitbank" id="bitbank"></div>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="k">Десяткове</div><div class="v" id="ro-dec">0</div></div>
+        <div class="ro"><div class="k">Двійкове</div><div class="v plain" id="ro-bin">00000000</div></div>
+        <div class="ro"><div class="k">Шістнадцяткове</div><div class="v plain" id="ro-hex">0x00</div></div>
+      </div>
+      <div class="formula" id="formula">Увімкни біти, щоб побачити суму.</div>
+      <div class="row">
+        <button class="btn" id="b-clear">Очистити</button>
+        <button class="btn" id="b-max">Максимум (255)</button>
+        <button class="btn" id="b-rand">Випадкове</button>
+      </div>
+      <p class="tip">Найбільший біт (ліворуч) = 128, найменший (праворуч) = 1. З 8 бітів можна закодувати числа від 0 до 255 — це 256 різних значень.</p>
+    </div>
+  </section>
+
+  <!-- ─────────────── ПОДВОЄННЯ ─────────────── -->
+  <section class="panel" id="panel-tree" role="tabpanel" aria-labelledby="tab-tree">
+    <div class="card">
+      <h2>Як біти подвоюються</h2>
+      <p class="hint">Кожне натискання дописує <b>один</b> біт. Попередні поверхи нікуди
+      не зникають — видно, з чого виріс кожен код. Клацни на будь-який код, щоб побачити
+      його шлях згори.</p>
+      <div class="readout">
+        <div class="ro"><div class="k">Бітів</div><div class="v" id="t-depth">1</div></div>
+        <div class="ro"><div class="k">Кодів</div><div class="v" id="t-total">2</div></div>
+        <div class="ro"><div class="k">Це</div><div class="v plain" id="t-pow">2 у степені 1</div></div>
+      </div>
+      <div class="tree-wrap"><div id="tree"></div></div>
+      <div class="formula" id="t-say"></div>
+      <div class="ttrace" id="t-trace"></div>
+      <div class="row">
+        <button class="btn primary" id="t-add">Додати біт</button>
+        <button class="btn" id="t-back">Прибрати біт</button>
+        <button class="btn" id="t-reset">Спочатку</button>
+      </div>
+      <p class="tip">Сірим — старий код, кольоровим і підкресленим — цифра, дописана на цьому
+      кроці. Синій нуль, зелена одиниця.</p>
+    </div>
+  </section>
+
+  <!-- ─────────────── ГРА ─────────────── -->
+  <section class="panel" id="panel-game" role="tabpanel" aria-labelledby="tab-game">
+    <div class="card">
+      <div class="flex-between">
+        <h2 style="margin:0">Тренажер</h2>
+        <div class="seg" role="group" aria-label="Режим гри">
+          <button id="mode-build" aria-pressed="true">Збери число</button>
+          <button id="mode-read" aria-pressed="false">Прочитай байт</button>
+        </div>
+      </div>
+
+      <div class="scoreboard">
+        <div class="stat"><div class="k">Рахунок</div><div class="v" id="g-score">0</div></div>
+        <div class="stat"><div class="k">Серія поспіль</div><div class="v" id="g-streak">0</div></div>
+        <div class="stat"><div class="k">Найкраща серія</div><div class="v" id="g-best">0</div></div>
+      </div>
+
+      <!-- Режим 1: зібрати число перемикачами -->
+      <div id="game-build">
+        <div class="target"><div class="lbl">Збери це число</div><div class="num" id="g-target">0</div></div>
+        <div class="bitbank-scroll"><div class="bitbank" id="gamebank"></div></div>
+        <div class="verdict" id="g-verdict-build">Клацай біти, поки сума не збіжиться.</div>
+      </div>
+
+      <!-- Режим 2: прочитати байт -->
+      <div id="game-read" style="display:none">
+        <p class="hint" style="text-align:center">Який десятковий запис має цей байт?</p>
+        <div class="bitbank-scroll"><div class="bitbank" id="readbank"></div></div>
+        <div class="center" style="margin-top:16px">
+          <input class="num-in" id="g-answer" type="number" min="0" max="255" inputmode="numeric" placeholder="?" aria-label="Твоя відповідь">
+          <div class="row" style="margin:0">
+            <button class="btn primary" id="g-check">Перевірити</button>
+            <button class="btn" id="g-skip">Пропустити</button>
+          </div>
+          <div class="verdict" id="g-verdict-read"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── ТЕКСТ → КОД ─────────────── -->
+  <section class="panel" id="panel-text" role="tabpanel" aria-labelledby="tab-text">
+    <div class="card">
+      <h2>Як комп'ютер зберігає текст</h2>
+      <p class="hint">Кожен символ має свій номер у таблиці Unicode. Цей номер записується байтами (кодування UTF-8). Напиши щось — і побачиш код кожного символу.</p>
+      <textarea id="text-in" spellcheck="false" aria-label="Текст для кодування">Привіт, 8-А! 🙂</textarea>
+      <div class="sumline">
+        <div class="ro"><div class="k">Символів</div><div class="v" id="t-chars">0</div></div>
+        <div class="ro"><div class="k">Байтів (UTF-8)</div><div class="v" id="t-bytes">0</div></div>
+        <div class="ro"><div class="k">Бітів</div><div class="v plain" id="t-bits">0</div></div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Символ</th><th>Код (Unicode)</th><th>U+HEX</th><th>Байтів</th><th>Двійковий код (UTF-8)</th></tr>
+          </thead>
+          <tbody id="t-body"></tbody>
+        </table>
+      </div>
+      <p class="tip">Зверни увагу: латинська літера, цифра чи пробіл — це 1 байт, а українська літера в UTF-8 — уже 2 байти. Емодзі можуть займати 4 байти.</p>
+    </div>
+  </section>
+
+  <!-- ─────────────── ОДИНИЦІ ─────────────── -->
+  <section class="panel" id="panel-units" role="tabpanel" aria-labelledby="tab-units">
+    <div class="card">
+      <h2>Одиниці вимірювання даних</h2>
+      <p class="hint">1 байт = 8 бітів. Далі кожна одиниця більша за попередню у 1024 рази.</p>
+      <div class="conv-in">
+        <input id="u-val" type="number" min="0" step="any" value="1" aria-label="Значення">
+        <select id="u-unit" aria-label="Одиниця">
+          <option value="0">біт</option>
+          <option value="1">байт</option>
+          <option value="2" selected>КБ (кілобайт)</option>
+          <option value="3">МБ (мегабайт)</option>
+          <option value="4">ГБ (гігабайт)</option>
+          <option value="5">ТБ (терабайт)</option>
+        </select>
+      </div>
+      <div class="conv-grid" id="u-grid"></div>
+      <div class="intuition">
+        <div class="intu"><div class="ic">📄</div><div class="t"><b>1 КБ</b> ≈ пів сторінки простого тексту</div></div>
+        <div class="intu"><div class="ic">🎵</div><div class="t"><b>4 МБ</b> ≈ одна пісня у форматі MP3</div></div>
+        <div class="intu"><div class="ic">📷</div><div class="t"><b>3–5 МБ</b> ≈ одне фото з телефона</div></div>
+        <div class="intu"><div class="ic">🎬</div><div class="t"><b>1 ГБ</b> ≈ година відео у гарній якості</div></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Інтерактивний матеріал до уроку · тема «Кодування та архіви даних»<br>
+  © 2025–2026 Процюк О. К. · вчитель інформатики · Харківський ліцей № 47<br>
+  <a href="../trenazhery.html" style="color: var(--text-dim)">&#8592; до тренажерів</a> &nbsp;·&nbsp; <a href="../about.html" data-doc style="color: var(--text-dim)">Про сайт і дані</a></footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const PLACES = [128, 64, 32, 16, 8, 4, 2, 1];
+
+  /* ── Таби ── */
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  const panels = { bits: $('panel-bits'), tree: $('panel-tree'), game: $('panel-game'), text: $('panel-text'), units: $('panel-units') };
+  function selectTab(tab) {
+    tabs.forEach(t => t.setAttribute('aria-selected', String(t === tab)));
+    Object.values(panels).forEach(p => p.classList.remove('active'));
+    const key = tab.id.replace('tab-', '');
+    panels[key].classList.add('active');
+  }
+  tabs.forEach((tab, i) => {
+    tab.addEventListener('click', () => selectTab(tab));
+    tab.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      const dir = e.key === 'ArrowRight' ? 1 : -1;
+      const next = tabs[(i + dir + tabs.length) % tabs.length];
+      next.focus(); selectTab(next);
+    });
+  });
+
+  /* ── Фабрика банку перемикачів ── */
+  // interactive=true → клікабельні; onToggle(bits) викликається після зміни
+  function buildBank(container, { interactive = true, onToggle = () => {} } = {}) {
+    const state = [0, 0, 0, 0, 0, 0, 0, 0];
+    container.innerHTML = '';
+    const switches = [];
+    PLACES.forEach((place, idx) => {
+      const col = document.createElement('div');
+      col.className = 'bitcol';
+      const label = document.createElement('div');
+      label.className = 'place';
+      label.innerHTML = `<b>${place}</b>`;
+      const sw = document.createElement('button');
+      sw.className = 'sw';
+      sw.type = 'button';
+      sw.setAttribute('aria-pressed', 'false');
+      sw.setAttribute('aria-label', `Біт зі значенням ${place}`);
+      sw.innerHTML = '<span class="led"></span><span class="digit">0</span><span class="knob"></span>';
+      const digit = sw.querySelector('.digit');
+      const setBit = (v) => {
+        state[idx] = v ? 1 : 0;
+        sw.setAttribute('aria-pressed', String(!!v));
+        digit.textContent = state[idx];
+      };
+      if (interactive) {
+        sw.addEventListener('click', () => { setBit(state[idx] ^ 1); onToggle(state); });
+      } else {
+        sw.disabled = true; sw.style.cursor = 'default';
+      }
+      switches.push({ setBit });
+      col.appendChild(label); col.appendChild(sw);
+      container.appendChild(col);
+    });
+    return {
+      state,
+      value: () => state.reduce((acc, b, i) => acc + b * PLACES[i], 0),
+      set: (arr) => { arr.forEach((v, i) => switches[i].setBit(v)); },
+      setNumber: (n) => { for (let i = 0; i < 8; i++) switches[i].setBit((n >> (7 - i)) & 1); },
+      clear: () => switches.forEach(s => s.setBit(0)),
+    };
+  }
+
+  const toBin = (n) => n.toString(2).padStart(8, '0');
+  const toHex = (n) => '0x' + n.toString(16).toUpperCase().padStart(2, '0');
+
+  /* ── Модуль «Біти» ── */
+  const mainBank = buildBank($('bitbank'), { onToggle: renderBits });
+  function renderBits() {
+    const val = mainBank.value();
+    $('ro-dec').textContent = val;
+    $('ro-bin').textContent = toBin(val);
+    $('ro-hex').textContent = toHex(val);
+    const parts = [];
+    mainBank.state.forEach((b, i) => { if (b) parts.push(PLACES[i]); });
+    $('formula').innerHTML = parts.length
+      ? parts.map(p => `<b>${p}</b>`).join(' + ') + ` = <b>${val}</b>`
+      : 'Усі біти вимкнені → значення <b>0</b>.';
+  }
+  $('b-clear').addEventListener('click', () => { mainBank.clear(); renderBits(); });
+  $('b-max').addEventListener('click', () => { mainBank.setNumber(255); renderBits(); });
+  $('b-rand').addEventListener('click', () => { mainBank.setNumber(Math.floor(Math.random() * 256)); renderBits(); });
+  renderBits();
+
+  /* ── Модуль «Подвоєння» ── */
+  const T_MAX = 4;                 // 16 кодів — далі на екран не влазить
+  let tDepth = 1;
+  let tPicked = null;
+
+  function tCodeHtml(code) {
+    const head = code.slice(0, -1);
+    const last = code.slice(-1);
+    return (head ? `<span class="o">${head}</span>` : '')
+         + `<span class="n${last}">${last}</span>`;
+  }
+
+  function tBuild(code) {
+    const node = document.createElement('div');
+    node.className = 'tnode'
+      + (code.length === tDepth ? ' fresh' : '')
+      + (tPicked && tPicked.indexOf(code) === 0 ? ' onpath' : '');
+
+    const box = document.createElement('button');
+    box.className = 'tbox';
+    box.type = 'button';
+    box.innerHTML = tCodeHtml(code);
+    box.addEventListener('click', () => {
+      tPicked = (tPicked === code) ? null : code;
+      renderTree(false);
+    });
+    node.appendChild(box);
+
+    if (code.length < tDepth) {
+      const kids = document.createElement('div');
+      kids.className = 'tkids';
+      kids.appendChild(tBuild(code + '0'));
+      kids.appendChild(tBuild(code + '1'));
+      node.appendChild(kids);
+    }
+    return node;
+  }
+
+  function tTrace(code) {
+    let out = `Звідки <code>${code}</code>: почали з <code>${code[0]}</code>`;
+    for (let i = 1; i < code.length; i++) {
+      out += `, дописали <b>${code[i]}</b> &rarr; <code>${code.slice(0, i + 1)}</code>`;
+    }
+    return out + '.';
+  }
+
+  function renderTree(grew) {
+    const total = Math.pow(2, tDepth);
+    $('t-depth').textContent = tDepth;
+    $('t-total').textContent = total;
+    $('t-pow').textContent = `2 у степені ${tDepth}`;
+
+    const box = $('tree');
+    box.innerHTML = '';
+    box.appendChild(tBuild('0'));
+    box.appendChild(tBuild('1'));
+
+    if (tDepth === 1) {
+      $('t-say').innerHTML = 'Один біт — два коди: <b>0</b> і <b>1</b>. '
+        + 'Більше одним бітом записати нічого.';
+    } else if (grew) {
+      $('t-say').innerHTML = `Кожен код попереднього поверху дав <b>два</b> нових: до одного `
+        + `дописали <b>0</b>, до другого <b>1</b>. Було <b>${total / 2}</b> — стало <b>${total}</b>.`;
+    } else {
+      $('t-say').innerHTML = `${tDepth} біти дають <b>${total}</b> кодів.`;
+    }
+
+    const tr = $('t-trace');
+    if (tPicked && tPicked.length > 1) {
+      tr.innerHTML = tTrace(tPicked);
+      tr.style.display = 'block';
+    } else {
+      tr.style.display = 'none';
+    }
+    $('t-add').disabled = tDepth >= T_MAX;
+    $('t-back').disabled = tDepth <= 1;
+  }
+
+  $('t-add').addEventListener('click', () => {
+    if (tDepth >= T_MAX) return;
+    tDepth += 1; tPicked = null; renderTree(true);
+  });
+  $('t-back').addEventListener('click', () => {
+    if (tDepth <= 1) return;
+    tDepth -= 1; tPicked = null; renderTree(false);
+  });
+  $('t-reset').addEventListener('click', () => {
+    tDepth = 1; tPicked = null; renderTree(false);
+  });
+  renderTree(false);
+
+  /* ── Модуль «Гра» ── */
+  let score = 0, streak = 0, best = 0, mode = 'build';
+  const setScore = () => { $('g-score').textContent = score; $('g-streak').textContent = streak; $('g-best').textContent = best; };
+  const win = () => { score++; streak++; best = Math.max(best, streak); setScore(); };
+  const lose = () => { streak = 0; setScore(); };
+
+  // Режим 1: зібрати число
+  let targetBuild = 0;
+  const gameBank = buildBank($('gamebank'), { onToggle: checkBuild });
+  function newBuild() {
+    targetBuild = Math.floor(Math.random() * 256);
+    $('g-target').textContent = targetBuild;
+    gameBank.clear();
+    const v = $('g-verdict-build');
+    v.className = 'verdict'; v.textContent = 'Клацай біти, поки сума не збіжиться.';
+  }
+  function checkBuild() {
+    const cur = gameBank.value();
+    const v = $('g-verdict-build');
+    if (cur === targetBuild) {
+      v.className = 'verdict hit'; v.textContent = '✅ Точно! Наступне число…';
+      win();
+      setTimeout(() => { if (mode === 'build') newBuild(); }, 900);
+    } else if (cur < targetBuild) {
+      v.className = 'verdict warm'; v.textContent = `Замало: ${cur} — додай ще ${targetBuild - cur}.`;
+    } else {
+      v.className = 'verdict miss'; v.textContent = `Забагато: ${cur} — це на ${cur - targetBuild} більше.`;
+    }
+  }
+
+  // Режим 2: прочитати байт
+  let targetRead = 0;
+  const readBank = buildBank($('readbank'), { interactive: false });
+  function newRead() {
+    targetRead = Math.floor(Math.random() * 256);
+    readBank.setNumber(targetRead);
+    $('g-answer').value = '';
+    $('g-verdict-read').className = 'verdict';
+    $('g-verdict-read').textContent = '';
+    $('g-answer').focus();
+  }
+  function checkRead() {
+    const ans = parseInt($('g-answer').value, 10);
+    const v = $('g-verdict-read');
+    if (Number.isNaN(ans)) { v.className = 'verdict miss'; v.textContent = 'Введи число.'; return; }
+    if (ans === targetRead) {
+      v.className = 'verdict hit'; v.textContent = '✅ Правильно! Наступний байт…';
+      win();
+      setTimeout(() => { if (mode === 'read') newRead(); }, 900);
+    } else {
+      v.className = 'verdict miss'; v.textContent = `Ні, правильно ${targetRead}. Спробуй ще раз.`;
+      lose();
+      setTimeout(() => { if (mode === 'read') newRead(); }, 1400);
+    }
+  }
+  $('g-check').addEventListener('click', checkRead);
+  $('g-skip').addEventListener('click', () => { lose(); newRead(); });
+  $('g-answer').addEventListener('keydown', (e) => { if (e.key === 'Enter') checkRead(); });
+
+  function setMode(m) {
+    mode = m;
+    const isBuild = m === 'build';
+    $('mode-build').setAttribute('aria-pressed', String(isBuild));
+    $('mode-read').setAttribute('aria-pressed', String(!isBuild));
+    $('game-build').style.display = isBuild ? '' : 'none';
+    $('game-read').style.display = isBuild ? 'none' : '';
+    if (isBuild) newBuild(); else newRead();
+  }
+  $('mode-build').addEventListener('click', () => setMode('build'));
+  $('mode-read').addEventListener('click', () => setMode('read'));
+  newBuild(); setScore();
+
+  /* ── Модуль «Текст → код» ── */
+  const enc = new TextEncoder();
+  function renderText() {
+    const text = $('text-in').value;
+    const chars = Array.from(text); // коректно розбиває на символи, зокрема емодзі
+    const body = $('t-body');
+    body.innerHTML = '';
+    let totalBytes = 0;
+    for (const ch of chars) {
+      const cp = ch.codePointAt(0);
+      const bytes = enc.encode(ch);
+      totalBytes += bytes.length;
+      const binStr = Array.from(bytes).map(b => b.toString(2).padStart(8, '0')).join(' ');
+      const bcls = bytes.length === 1 ? 'b1' : (bytes.length === 2 ? 'b2' : 'b3');
+      const shown = ch === ' ' ? '␣' : (ch === '\n' ? '⏎' : ch);
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td class="ch">${escapeHtml(shown)}</td>` +
+        `<td class="mono">${cp}</td>` +
+        `<td class="mono">U+${cp.toString(16).toUpperCase().padStart(4, '0')}</td>` +
+        `<td><span class="badge ${bcls}">${bytes.length}</span></td>` +
+        `<td class="mono">${binStr}</td>`;
+      body.appendChild(tr);
+    }
+    $('t-chars').textContent = chars.length;
+    $('t-bytes').textContent = totalBytes;
+    $('t-bits').textContent = totalBytes * 8;
+  }
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  $('text-in').addEventListener('input', renderText);
+  renderText();
+
+  /* ── Модуль «Одиниці» ── */
+  // множники до бітів: біт=1, байт=8, далі ×1024
+  const UNIT_NAMES = ['біт', 'байт', 'КБ', 'МБ', 'ГБ', 'ТБ'];
+  const bitFactor = [1, 8, 8 * 1024, 8 * 1024 ** 2, 8 * 1024 ** 3, 8 * 1024 ** 4, 8 * 1024 ** 5];
+  function fmt(n) {
+    if (!isFinite(n)) return '—';
+    if (n === 0) return '0';
+    if (Number.isInteger(n) && Math.abs(n) < 1e15) return n.toLocaleString('uk-UA');
+    if (Math.abs(n) >= 1000 || Math.abs(n) < 0.001) return n.toExponential(3);
+    return parseFloat(n.toFixed(4)).toLocaleString('uk-UA');
+  }
+  function renderUnits() {
+    const val = parseFloat($('u-val').value);
+    const unit = parseInt($('u-unit').value, 10);
+    const grid = $('u-grid');
+    grid.innerHTML = '';
+    const bits = (isNaN(val) ? 0 : val) * bitFactor[unit];
+    UNIT_NAMES.forEach((name, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'conv-cell' + (i === unit ? ' hi' : '');
+      cell.innerHTML = `<div class="k">${name}</div><div class="v">${fmt(bits / bitFactor[i])}</div>`;
+      grid.appendChild(cell);
+    });
+  }
+  $('u-val').addEventListener('input', renderUnits);
+  $('u-unit').addEventListener('change', renderUnits);
+  renderUnits();
+})();
+</script>
