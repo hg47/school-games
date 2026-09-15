@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   ПЕРЕМИКАЧ ТЕМИ · авто → світла → темна → авто
+   ПЕРЕМИКАЧ ТЕМИ · світла (за замовчуванням) ⇄ темна
    Підключати в <head> БЕЗ defer:
 
      <script src="assets/theme.js"></script>          (у корені)
@@ -8,48 +8,46 @@
    ⚠️ Саме в <head> і саме без defer — тоді тема проставлена ще до першого
       малювання й немає блимання світлим на темній темі.
 
-   ⚠️ КЛЮЧОВЕ РІШЕННЯ: «авто» розбирає цей скрипт, а не css. У css немає
-      жодного @media (prefers-color-scheme) — там лише :root (темна) і
-      :root[data-theme="light"]. Скрипт читає системну настройку й проставляє
-      КОНКРЕТНЕ значення. Завдяки цьому світла палітра описана один раз,
-      а не двічі (в media-запиті та в блоці атрибута), і копії не розходяться.
+   ⛔⛔ РІШЕННЯ ВЧИТЕЛЯ 15.09.2026: режиму «авто» БІЛЬШЕ НЕМАЄ.
+      Сайт завжди відкривається у СВІТЛІЙ темі, хоч би що стояло в системі —
+      уроки показують з екрана, і дітям звичніший світлий вигляд.
+      Темну вмикає сам учитель кнопкою в правому верхньому куті.
 
-   Вибір користувача (auto|light|dark) живе в localStorage під ключем "theme"
-   і спільний для всіх сторінок сайту: обрав на головній — діє і в грі.
+   ⚠️ У css немає жодного @media (prefers-color-scheme) І ЦЕ ЛИШАЄТЬСЯ ТАК:
+      скрипт проставляє html[data-theme="light"|"dark"] конкретним значенням,
+      тому світла палітра описана один раз і копії не розходяться.
+
+   Вибір користувача (light|dark) живе в localStorage під ключем "theme"
+   і спільний для всіх сторінок сайту: обрав на головній — діє і в грі,
+   і в тренажері. ⚠️ Старе значення "auto" читається як «світла».
    ═══════════════════════════════════════════════════════════════════════════ */
 (() => {
   "use strict";
   const KEY = "theme";
-  const ORDER = ["auto", "light", "dark"];
-  const LABEL = { auto: "авто (як у системі)", light: "світла", dark: "темна" };
-  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  const ORDER = ["light", "dark"];
+  const LABEL = { light: "світла", dark: "темна" };
 
-  // localStorage може бути заборонений (приватний режим, політика) — не падаємо
+  // localStorage може бути заборонений (приватний режим, політика) — не падаємо.
+  // ⚠️ Усе, що не "light"/"dark" (зокрема старе "auto"), читається як «світла».
   const get = () => {
-    try { const v = localStorage.getItem(KEY); return ORDER.includes(v) ? v : "auto"; }
-    catch (e) { return "auto"; }
+    try { const v = localStorage.getItem(KEY); return ORDER.includes(v) ? v : "light"; }
+    catch (e) { return "light"; }
   };
   const save = v => { try { localStorage.setItem(KEY, v); } catch (e) {} };
 
   const apply = () => {
     const choice = get();
-    const real = choice === "auto" ? (mq.matches ? "dark" : "light") : choice;
-    document.documentElement.setAttribute("data-theme", real);
+    document.documentElement.setAttribute("data-theme", choice);
     return choice;
   };
 
   apply();   // до першого малювання
+  // ⛔ Слухача системної теми немає навмисно: сайт за системою не перемикається.
 
-  // якщо стоїть «авто», а користувач перемкнув тему в системі — реагуємо
-  const onSys = () => { if (get() === "auto") { apply(); repaint(); } };
-  if (mq.addEventListener) mq.addEventListener("change", onSys);
-  else if (mq.addListener) mq.addListener(onSys);           // старі Safari
-
-  // ── іконки: півколо (авто), сонце (світла), місяць (темна) ──
+  // ── іконки: сонце (світла), місяць (темна) ──
   const SVG = s => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
     'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + s + '</svg>';
   const ICON = {
-    auto: SVG('<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor" stroke="none"/>'),
     light: SVG('<circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2' +
                'M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6"/>'),
     dark: SVG('<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7.5 7.5 0 1 0 10.5 10.5z"/>')

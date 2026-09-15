@@ -2,7 +2,38 @@
 <meta name="description" content="Інтерактивний пульт для теми «Двійкове кодування»: біти-перемикачі, гра «Збери число», кодування тексту в Unicode/UTF-8 та одиниці вимірювання даних.">
 <style>
   /* ── Токени: тема за замовчуванням (темний «пульт») ── */
+  /* ТЕМА: світла за замовчуванням, темна — за data-theme.
+     Рішення вчителя 15.09.2026: сторінку показують класу з екрана,
+     і дітям звичніший світлий вигляд. Темну вмикає кнопка в правому
+     верхньому куті (ключ localStorage спільний з усім сайтом).
+     ⛔ @media (prefers-color-scheme) тут більше немає: за системою
+        сторінка не перемикається. */
   :root {
+    color-scheme: light;
+    --bg: #eaeef4;
+    --surface: #ffffff;
+    --surface-2: #f2f6fb;
+    --raised: #e9eff6;
+    --border: #d3dde8;
+    --border-soft: #e2e9f1;
+    --text: #16232f;
+    --text-dim: #566878;
+    --text-faint: #8497a7;
+    --accent: #d9860a;          /* янтарний LED — головний акцент */
+    --accent-strong: #b96f00;
+    --accent-ink: #fff7e9;      /* текст на янтарному */
+    --accent-glow: rgba(217,134,10,.35);
+    --off: #d3dde7;             /* вимкнений біт */
+    --off-face: #9aa9b8;
+    --good: #12a97a;
+    --good-ink: #ffffff;
+    --bad: #d1495b; --n-zero: #1f6fe0;
+    --shadow: rgba(31,50,72,.14);
+    --mono: "Cascadia Code", "Cascadia Mono", "JetBrains Mono", "SF Mono", ui-monospace, "Consolas", monospace;
+    --sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
     --bg: #0f1720;
     --surface: #16212e;
     --surface-2: #1d2b3b;
@@ -12,42 +43,27 @@
     --text: #e7eef5;
     --text-dim: #8ea0b3;
     --text-faint: #5f7386;
-    --accent: #f6a723;          /* янтарний LED — головний акцент */
+    --accent: #f6a723;
     --accent-strong: #ffbe4d;
-    --accent-ink: #1a1206;      /* текст на янтарному */
+    --accent-ink: #1a1206;
     --accent-glow: rgba(246,167,35,.55);
-    --off: #2a3a4c;             /* вимкнений біт */
+    --off: #2a3a4c;
     --off-face: #56697c;
     --good: #35d29a;
     --good-ink: #05271b;
     --bad: #f2717d; --n-zero: #6cb8ff;
     --shadow: rgba(0,0,0,.45);
-    --mono: "Cascadia Code", "Cascadia Mono", "JetBrains Mono", "SF Mono", ui-monospace, "Consolas", monospace;
-    --sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   }
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg: #eaeef4;
-      --surface: #ffffff;
-      --surface-2: #f2f6fb;
-      --raised: #e9eff6;
-      --border: #d3dde8;
-      --border-soft: #e2e9f1;
-      --text: #16232f;
-      --text-dim: #566878;
-      --text-faint: #8497a7;
-      --accent: #d9860a;
-      --accent-strong: #b96f00;
-      --accent-ink: #fff7e9;
-      --accent-glow: rgba(217,134,10,.35);
-      --off: #d3dde7;
-      --off-face: #9aa9b8;
-      --good: #12a97a;
-      --good-ink: #ffffff;
-      --bad: #d1495b; --n-zero: #1f6fe0;
-      --shadow: rgba(31,50,72,.14);
-    }
-  }
+  /* Кнопку теми створює ../assets/theme.js (на сайті). site.css тут не
+     підключений, тож її вигляд описано поруч, власними токенами пульта. */
+  .themebtn{position:fixed; top:18px; right:18px; z-index:60; display:grid;
+    place-items:center; width:36px; height:36px; padding:0; cursor:pointer;
+    border-radius:999px; color:var(--text-dim); background:var(--surface);
+    border:1px solid var(--border); box-shadow:0 1px 3px var(--shadow);
+    transition:color .15s, border-color .15s}
+  .themebtn:hover{color:var(--text); border-color:var(--text-faint)}
+  .themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .themebtn svg{display:block; width:18px; height:18px}
   /* Явний перемикач теми глядача має перемагати media-query в обидва боки */
   :root[data-theme="dark"] {
     --bg: #0f1720; --surface: #16212e; --surface-2: #1d2b3b; --raised: #22344a;
