@@ -32,8 +32,8 @@ jobs:
     steps:
       - name: Запит до бази
         env:
-          SB_URL: https://crpxwvtbqhcmrbqkprfq.supabase.co
-          SB_KEY: sb_publishable_Sz7qnnhtWikrc-TjUfUsYQ_W6El0BaW
+          SB_URL: https://bxisrqyfmkgxsvpvbkme.supabase.co
+          SB_KEY: sb_publishable_mYEUdMbaDByzAuz7_0euJw_9POCrKcq
         run: |
           fail=0
           for i in 1 2; do
