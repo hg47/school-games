@@ -9,7 +9,7 @@
 insert into public.games (slug, title, description, max_score)
 values (
   'bezpeka-internet',
-  'Безпека в Інтернеті',
+  '5 клас · Безпека в Інтернеті',
   'Правила безпеки, мережевий етикет, факт/судження, надійність сайту — ГР 4, 5 клас',
   20
 )

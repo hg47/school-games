@@ -21,7 +21,7 @@
 insert into public.games (slug, title, description, max_score)
 values (
   'dani-ta-informatsiya',
-  'Дані та інформація',
+  '5 клас · Дані та інформація',
   'Види повідомлень, зорова інформація, інформаційні процеси, типи даних — ГР 1, 5 клас',
   21
 )
@@ -34,7 +34,7 @@ on conflict (slug) do update
 insert into public.games (slug, title, description, max_score)
 values (
   'bezpeka-internet',
-  'Безпека в Інтернеті',
+  '5 клас · Безпека в Інтернеті',
   'Правила безпеки, мережевий етикет, факт/судження, надійність сайту — ГР 4, 5 клас',
   20
 )
@@ -47,7 +47,7 @@ on conflict (slug) do update
 insert into public.games (slug, title, description, max_score)
 values (
   'cyfrovyi-svit-6',
-  'Цифровий світ',
+  '6 клас · Цифровий світ',
   'Цифрові пристрої та їх класифікація, етапи створення презентації, цифровий слід і безпека — ГР 1 та ГР 4, 6 клас',
   25
 )
@@ -60,7 +60,7 @@ on conflict (slug) do update
 insert into public.games (slug, title, description, max_score)
 values (
   'grafika-6',
-  'Графіка: свідомий вибір',
+  '6 клас · Графіка: свідомий вибір',
   'Растр чи вектор під задачу, вибір інструмента під елемент, порядок створення, точність засобами програми, формати файлів — ГР 3, 6 клас',
   27
 )
@@ -73,7 +73,7 @@ on conflict (slug) do update
 insert into public.games (slug, title, description, max_score)
 values (
   'koduvannya-8',
-  'Кодування даних',
+  '8 клас · Кодування даних',
   'Двійковий код і байт, число ↔ байт, переходи між одиницями (Б, б, кБ, МБ), довжина двійкового коду тексту, розмір файлу BMP із вирівнюванням — ГР 1, 8 клас',
   18
 )
@@ -86,7 +86,7 @@ on conflict (slug) do update
 insert into public.games (slug, title, description, max_score)
 values (
   'bezpeka-tehnika-8',
-  'Безпека й технології',
+  '8 клас · Безпека й технології',
   'Розпізнавання шахрайської реклами, вибір типу комп''ютера під задачу, етика й безпека цифрової взаємодії, дії при неполадках, державні послуги в смартфоні — ГР 4, 8 клас',
   24
 )
@@ -99,7 +99,7 @@ on conflict (slug) do update
 insert into public.games (slug, title, description, max_score)
 values (
   'svidomyi-vybir-7',
-  'Свідомий вибір',
+  '7 клас · Свідомий вибір',
   'Що дає хмарний сервіс, вибір інструмента для монтажу звуку, коли розгалуження в презентації потрібне, керування показом і маршрут показу під аудиторію — ГР 3, 7 клас',
   26
 )
@@ -112,7 +112,7 @@ on conflict (slug) do update
 insert into public.games (slug, title, description, max_score)
 values (
   'alhorytmy-8',
-  'Алгоритми та програми',
+  '8 клас · Алгоритми та програми',
   'Яка форма розгалуження потрібна, or чи and у складній умові, обчислення за математичною моделлю, коли варто писати програму і логіка у фільтрах та пошуку — ГР 2 та ГР 3, 8 клас, Тема 3',
   26
 )

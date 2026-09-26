@@ -83,7 +83,7 @@ create policy results_own on public.results for select to authenticated
 --  Перша гра в каталозі
 -- ============================================================
 insert into public.games (slug, title, description, max_score)
-values ('naved-lad', 'Наведи лад', 'Файли, папки, Кошик — 5 клас', 17)
+values ('naved-lad', '5 клас · Наведи лад', 'Файли, папки, Кошик — 5 клас', 17)
 on conflict (slug) do nothing;
 
 -- ПЕРЕВІРКА: після Run має повернути 4 рядки (назви таблиць)

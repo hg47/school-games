@@ -9,7 +9,7 @@
 insert into public.games (slug, title, description, max_score)
 values (
   'dani-ta-informatsiya',
-  'Дані та інформація',
+  '5 клас · Дані та інформація',
   'Види повідомлень, зорова інформація, інформаційні процеси, типи даних — ГР 1, 5 клас',
   21
 )
