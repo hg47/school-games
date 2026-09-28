@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="uk" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Архіватор зсередини — 8 клас</title>
+<meta name="description" content="Інтерактивний стенд до теми «Стиснення даних. Архіви»: стиснення з втратою на картинці й на числах, азбука Морзе проти ASCII, як архіватор знаходить повтори і чому фото не стискається вдруге.">
+<script src="../assets/theme.js"></script>
+<style>
+  /* ТЕМА: світла за замовчуванням, темна — лише за data-theme (кнопка в правому
+     верхньому куті створюється ../assets/theme.js). @media (prefers-color-scheme)
+     тут свідомо немає: за системою сторінка не перемикається. */
+  :root{
+    color-scheme:light;
+    --bg:#eef2f7; --surface:#ffffff; --surface-2:#f4f7fb; --border:#d5dee8;
+    --text:#16232f; --dim:#566878; --faint:#8a9bab;
+    --accent:#2f7de0; --accent-ink:#ffffff; --accent-soft:#e3eefc;
+    --warm:#e8860c; --warm-soft:#fdf0dd;
+    --good:#12a97a; --good-soft:#dcf5ec; --bad:#d1495b; --bad-soft:#fbe4e7;
+    --hl1:#ffe29a; --hl2:#bfe3ff; --hl3:#c9f2d6; --hl4:#f6cfe6; --hl5:#e2d7ff;
+    --shadow:rgba(31,50,72,.10);
+    --win-hover:#e5f3ff; --win-sel:#cce8ff; --win-sel-line:#99d1ff;
+    --mono:"Cascadia Mono","Consolas",ui-monospace,monospace;
+    --sans:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#0f1720; --surface:#16212e; --surface-2:#1d2b3b; --border:#2c3e53;
+    --text:#e7eef5; --dim:#9aabbd; --faint:#6a7e91;
+    --accent:#6cb0ff; --accent-ink:#06121f; --accent-soft:#17324f;
+    --warm:#f6a723; --warm-soft:#3a2a10;
+    --good:#35d29a; --good-soft:#123a2d; --bad:#f2717d; --bad-soft:#3d1c22;
+    --hl1:#6b5a1f; --hl2:#1f4f72; --hl3:#1f5a37; --hl4:#63294b; --hl5:#3f3470;
+    --shadow:rgba(0,0,0,.4);
+    --win-hover:#2a3644; --win-sel:#1f4a6e; --win-sel-line:#3a78a8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--sans);
+    font-size:20px; line-height:1.45}
+  .wrap{max-width:1150px; margin:0 auto; padding:28px 28px 60px}
+  h1{font-size:30px; margin:0 0 4px}
+  .sub{color:var(--dim); margin:0 0 20px}
+  .tabs{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 18px}
+  .tab{font:inherit; font-size:18px; padding:10px 16px; border-radius:12px; cursor:pointer;
+    border:1px solid var(--border); background:var(--surface); color:var(--text)}
+  .tab[aria-selected="true"]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+  .tab .n{opacity:.7; margin-right:6px}
+  .panel{display:none}
+  .panel.on{display:block}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:18px 20px; margin:0 0 16px; box-shadow:0 1px 3px var(--shadow)}
+  .card h2{font-size:22px; margin:0 0 10px}
+  .hint{color:var(--dim); font-size:17px; margin:6px 0 0}
+  .row{display:flex; flex-wrap:wrap; gap:14px; align-items:center}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+  @media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr} .wrap{padding:16px} body{font-size:17px}}
+  button.btn{font:inherit; font-size:18px; padding:9px 16px; border-radius:10px; cursor:pointer;
+    border:1px solid var(--accent); background:var(--accent); color:var(--accent-ink)}
+  button.btn.ghost{background:var(--surface); color:var(--accent)}
+  button.btn:disabled{opacity:.45; cursor:default}
+  input[type=text], textarea{font:inherit; font-size:20px; width:100%; padding:10px 12px;
+    border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--text)}
+  textarea{min-height:90px; resize:vertical}
+  input[type=range]{width:100%; accent-color:var(--accent)}
+  .big{font-size:26px; font-weight:650}
+  .num{font-family:var(--mono)}
+  .stat{background:var(--surface-2); border-radius:12px; padding:10px 14px}
+  .stat .l{color:var(--dim); font-size:16px}
+  .stat .v{font-size:26px; font-weight:650; font-family:var(--mono)}
+  .good{color:var(--good)} .bad{color:var(--bad)} .warm{color:var(--warm)}
+  /* вкладка 1 */
+  .imgbox{position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--border); background:#000}
+  .imgbox img{display:block; width:100%; image-rendering:pixelated}
+  .lossy-text{font-family:var(--mono); font-size:24px; letter-spacing:.02em; word-break:break-word}
+  .lossy-text .gone{background:var(--bad-soft); color:var(--bad); text-decoration:line-through}
+  /* вкладка 2 */
+  .morse-table{width:100%; border-collapse:collapse; font-size:19px}
+  .morse-table th,.morse-table td{padding:6px 8px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top}
+  .morse-table th{color:var(--dim); font-weight:600; font-size:16px}
+  .sig{font-family:var(--mono); font-size:26px; letter-spacing:.12em; white-space:nowrap}
+  .bits{font-family:var(--mono); font-size:18px; white-space:nowrap}
+  .stream{font-family:var(--mono); font-size:22px; word-break:break-all; background:var(--surface-2);
+    border-radius:10px; padding:10px 12px; line-height:1.7}
+  .stream .cut{display:inline-block; width:2px; height:1.1em; background:var(--warm); margin:0 3px; vertical-align:middle}
+  .seg{display:inline-flex; gap:6px}
+  .seg button{font:inherit; font-size:17px; padding:7px 12px; border-radius:9px; cursor:pointer;
+    border:1px solid var(--border); background:var(--surface); color:var(--text)}
+  .seg button[aria-pressed="true"]{background:var(--accent-soft); border-color:var(--accent); color:var(--accent)}
+  .reading{display:inline-block; margin:4px 8px 4px 0; padding:6px 12px; border-radius:10px;
+    background:var(--warm-soft); font-size:20px}
+  /* вкладка 3 */
+  .lz{font-family:var(--mono); font-size:23px; line-height:1.9; word-break:break-word; white-space:pre-wrap}
+  .lz .m{border-radius:5px; padding:1px 0}
+  .lz .ref{display:inline-block; border-radius:7px; padding:0 7px; margin:0 2px; font-size:18px;
+    font-weight:650; border:1px solid var(--border); line-height:1.5}
+  .lz .todo{color:var(--faint)}
+  /* вкладка 4 */
+  .bar{height:26px; border-radius:7px; background:var(--accent); min-width:3px; transition:width .25s}
+  .bar.after{background:var(--good)}
+  .barwrap{background:var(--surface-2); border-radius:8px; padding:4px; margin:4px 0 8px}
+  .note{background:var(--surface-2); border-left:4px solid var(--warm); border-radius:8px;
+    padding:10px 14px; font-size:17px; color:var(--dim)}
+  /* вкладка 5 — вікно Провідника */
+  .win{background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden;
+    box-shadow:0 4px 18px var(--shadow); user-select:none}
+  .win-bar{display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface-2);
+    border-bottom:1px solid var(--border); font-size:18px}
+  .win-bar button{font:inherit; font-size:18px; padding:4px 12px; border-radius:8px; cursor:pointer;
+    border:1px solid var(--border); background:var(--surface); color:var(--text)}
+  .win-bar button:disabled{opacity:.4; cursor:default}
+  .crumbs{flex:1; padding:4px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface); font-size:18px}
+  .ftable{width:calc(100% - 12px); margin:0 6px; border-collapse:separate; border-spacing:0 2px; font-size:19px}
+  .ftable th{text-align:left; font-weight:600; font-size:16px; color:var(--dim); padding:8px 14px; border-bottom:1px solid var(--border)}
+  .ftable td{padding:7px 14px; border-top:1px solid transparent; border-bottom:1px solid transparent}
+  .ftable td:first-child{border-left:1px solid transparent; border-radius:5px 0 0 5px}
+  .ftable td:last-child{border-right:1px solid transparent; border-radius:0 5px 5px 0}
+  .ftable tr.item{cursor:default}
+  .ftable tr.item:hover td{background:var(--win-hover)}
+  .ftable tr.sel td, .ftable tr.sel:hover td{background:var(--win-sel); border-color:var(--win-sel-line)}
+  .ftable td.r{text-align:right; font-family:var(--mono)}
+  .ico{display:inline-block; width:1.5em; text-align:center}
+  .empty{padding:26px 14px; color:var(--faint)}
+  .ctx{position:fixed; z-index:80; min-width:280px; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; box-shadow:0 8px 24px var(--shadow); padding:6px; font-size:18px}
+  .ctx div{padding:8px 12px; border-radius:7px; cursor:pointer}
+  .ctx div:hover{background:var(--accent-soft)}
+  .ctx div.off{color:var(--faint); cursor:default}
+  .ctx div.off:hover{background:none}
+  .ctx hr{border:0; border-top:1px solid var(--border); margin:4px 0}
+  .winstatus{padding:8px 14px; font-size:16px; color:var(--dim); background:var(--surface-2); border-top:1px solid var(--border)}
+  footer{color:var(--faint); font-size:15px; margin-top:28px}
+  /* кнопка теми — стилі тут, бо site.css не підключений */
+  .themebtn{position:fixed; top:18px; right:18px; z-index:60; display:grid; place-items:center;
+    width:36px; height:36px; padding:0; cursor:pointer; border-radius:999px; color:var(--dim);
+    background:var(--surface); border:1px solid var(--border); box-shadow:0 1px 3px var(--shadow)}
+  .themebtn:hover{color:var(--text)}
+  .themebtn svg{display:block; width:18px; height:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Архіватор зсередини</h1>
+  <p class="sub">8 клас · Тема 1. Кодування та архіви даних · стиснення даних, азбука Морзе, архіви</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-t="1" aria-selected="true"><span class="n">1</span>Стиснення з втратою</button>
+    <button class="tab" role="tab" data-t="2" aria-selected="false"><span class="n">2</span>Морзе і ASCII</button>
+    <button class="tab" role="tab" data-t="3" aria-selected="false"><span class="n">3</span>Як архіватор шукає повтори</button>
+    <button class="tab" role="tab" data-t="4" aria-selected="false"><span class="n">4</span>Стиснути ще раз</button>
+    <button class="tab" role="tab" data-t="5" aria-selected="false"><span class="n">5</span>Архів як папка</button>
+  </div>
+
+  <!-- ═══════════ 1. СТИСНЕННЯ З ВТРАТОЮ ═══════════ -->
+  <section class="panel on" id="p1">
+    <div class="card">
+      <h2>Картинка: рухайте повзунок якості jpg</h2>
+      <div class="grid2">
+        <div>
+          <div class="imgbox"><img id="jpgImg" alt="Картинка після стиснення в jpg"></div>
+          <p class="hint">Картинку збільшено вдвічі, щоб було видно, що саме губиться.</p>
+        </div>
+        <div>
+          <label for="q" class="big">Якість: <span id="qv" class="num">90</span> %</label>
+          <input type="range" id="q" min="1" max="100" value="90">
+          <div class="row" style="margin-top:12px">
+            <div class="stat" style="flex:1"><div class="l">без втрати (png)</div><div class="v" id="pngSize">…</div></div>
+            <div class="stat" style="flex:1"><div class="l">із втратою (jpg)</div><div class="v warm" id="jpgSize">…</div></div>
+          </div>
+          <div class="stat" style="margin-top:12px"><div class="l">jpg менший за png у</div><div class="v good" id="jpgRatio">…</div></div>
+          <p class="hint">Розміри рахує сам браузер, коли по-справжньому зберігає картинку. У різних браузерах числа трохи відрізняються.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Текст і числа: що буде, якщо стиснути їх так само</h2>
+      <input type="text" id="lossIn" value="Сума до сплати: 1024 гривні. Код під'їзду 7391.">
+      <label for="loss" class="big" style="display:block; margin-top:12px">Викинути: <span id="lossv" class="num">0</span> % символів</label>
+      <input type="range" id="loss" min="0" max="40" value="0" step="5">
+      <div class="grid2" style="margin-top:10px">
+        <div><div class="hint">що викинуто</div><div class="lossy-text" id="lossMarked"></div></div>
+        <div><div class="hint">що отримає той, хто розпакує</div><div class="lossy-text" id="lossOut"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 2. МОРЗЕ І ASCII ═══════════ -->
+  <section class="panel" id="p2">
+    <div class="card">
+      <h2>Одне слово — два способи запису</h2>
+      <div class="row">
+        <div style="flex:1; min-width:260px"><input type="text" id="mIn" value="HELLO WORLD" maxlength="24"></div>
+        <div class="seg" role="group" aria-label="Мова">
+          <button type="button" data-lang="en" aria-pressed="true">Англійська</button>
+          <button type="button" data-lang="uk" aria-pressed="false">Українська</button>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button type="button" class="btn ghost" data-w="HELLO WORLD">HELLO WORLD</button>
+        <button type="button" class="btn ghost" data-w="EEE TTT">EEE TTT</button>
+        <button type="button" class="btn ghost" data-w="МОЛОКО">МОЛОКО</button>
+        <button type="button" class="btn ghost" data-w="ДОБРО">ДОБРО</button>
+      </div>
+      <div class="grid3" style="margin-top:14px">
+        <div class="stat"><div class="l">літер (пробіли не рахуємо)</div><div class="v" id="mLetters">0</div></div>
+        <div class="stat"><div class="l" id="mCodeName">ASCII: бітів</div><div class="v" id="mBits">0</div></div>
+        <div class="stat"><div class="l">Морзе: крапок і тире</div><div class="v good" id="mSig">0</div></div>
+      </div>
+      <div style="overflow-x:auto; margin-top:12px">
+        <table class="morse-table">
+          <thead><tr><th>Літера</th><th>Морзе</th><th id="mColName">ASCII, 8 бітів</th></tr></thead>
+          <tbody id="mBody"></tbody>
+        </table>
+      </div>
+      <p class="hint" id="mMissing"></p>
+    </div>
+
+    <div class="card">
+      <h2>Чому комп'ютеру незручні коди різної довжини</h2>
+      <p style="margin:0 0 6px">Той самий запис Морзе без пауз між літерами:</p>
+      <div class="stream" id="mStream"></div>
+      <div class="row" style="margin-top:12px">
+        <button type="button" class="btn" id="mPuzzle">Що може означати «· —» без паузи?</button>
+      </div>
+      <div id="mReadings" style="margin-top:10px"></div>
+      <p style="margin:16px 0 6px">А тепер той самий текст у 8-бітному коді. Комп'ютер просто відраховує по 8 нулів та одиниць:</p>
+      <div class="stream" id="bStream"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 3. ПОВТОРИ ═══════════ -->
+  <section class="panel" id="p3">
+    <div class="card">
+      <h2>Архіватор шукає, що вже траплялося раніше</h2>
+      <div class="row">
+        <button type="button" class="btn ghost" data-p="bib">Скоромовка двічі</button>
+        <button type="button" class="btn ghost" data-p="ha">Сміх у чаті</button>
+        <button type="button" class="btn ghost" data-p="rnd">Випадкові літери</button>
+      </div>
+      <textarea id="lzIn" style="margin-top:12px" aria-label="Текст для стиснення"></textarea>
+      <div class="row" style="margin-top:12px">
+        <button type="button" class="btn" id="lzStep">Крок ▶</button>
+        <button type="button" class="btn ghost" id="lzAll">Усе одразу</button>
+        <button type="button" class="btn ghost" id="lzReset">Спочатку</button>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h2>Було</h2><div class="lz" id="lzSrc"></div></div>
+      <div class="card"><h2>Стало</h2><div class="lz" id="lzOut"></div>
+        <p class="hint">Позначка <b>↩ 12 · 5</b> означає: «повернись на 12 символів назад і візьми звідти 5».</p></div>
+    </div>
+    <div class="grid3">
+      <div class="stat"><div class="l">було символів</div><div class="v" id="lzN">0</div></div>
+      <div class="stat"><div class="l">стало (позначка = 2 символи)</div><div class="v" id="lzM">0</div></div>
+      <div class="stat"><div class="l">коефіцієнт стиснення</div><div class="v good" id="lzK">—</div></div>
+    </div>
+    <p class="note" style="margin-top:12px">Це спрощена модель. Справжній zip шукає повтори саме так, а потім ще й записує самі позначки коротшим кодом.</p>
+  </section>
+
+  <!-- ═══════════ 4. СТИСНУТИ ЩЕ РАЗ ═══════════ -->
+  <section class="panel" id="p4">
+    <div class="card">
+      <h2>Справжнє стиснення zip — прямо в браузері</h2>
+      <div class="row">
+        <button type="button" class="btn" id="zGo">Заархівувати всі три</button>
+        <span class="hint" id="zState"></span>
+      </div>
+    </div>
+    <div class="grid3" id="zCards"></div>
+    <p class="note">Алгоритм той самий, яким Windows робить «Стиснуту папку». Картинка — та сама, що у вкладці 1, збережена двома способами.</p>
+  </section>
+
+  <!-- ═══════════ 5. АРХІВ ЯК ПАПКА ═══════════ -->
+  <section class="panel" id="p5">
+    <div class="card">
+      <h2>Навчальний Провідник: створити архів і відкрити його як папку</h2>
+      <p class="hint" style="margin-top:0">Права кнопка миші на теці чи файлі відкриває меню. Подвійне клацання відкриває теку або архів. Усі файли тут вигадані, на комп'ютері нічого не зміниться.</p>
+    </div>
+    <div class="win" id="xWin">
+      <div class="win-bar">
+        <button type="button" id="xBack" title="Назад">← Назад</button>
+        <div class="crumbs" id="xPath">Демо</div>
+        <button type="button" id="xCopy">Копіювати</button>
+        <button type="button" id="xPaste">Вставити</button>
+        <button type="button" id="xReset" title="Почати спочатку">↺ Спочатку</button>
+      </div>
+      <table class="ftable">
+        <thead id="xHead"></thead>
+        <tbody id="xBody"></tbody>
+      </table>
+      <div id="xFill" style="min-height:70px"></div>
+      <div class="winstatus" id="xStatus"></div>
+    </div>
+    <div class="ctx" id="xMenu" hidden></div>
+  </section>
+
+  <footer>© 2025–2026 Процюк О. К. · вчитель інформатики · Харківський ліцей № 47 · CC BY-NC-SA 4.0</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  function kb(n){ return (n/1024).toFixed(1).replace(".", ",") + " КБ"; }
+  function x(n){ return n.toFixed(1).replace(".", ",") + " раза"; }
+
+  /* ── вкладки ── */
+  var tabs = document.querySelectorAll(".tab");
+  tabs.forEach(function(t){
+    t.addEventListener("click", function(){
+      tabs.forEach(function(o){ o.setAttribute("aria-selected", o === t ? "true" : "false"); });
+      document.querySelectorAll(".panel").forEach(function(p){ p.classList.toggle("on", p.id === "p" + t.dataset.t); });
+    });
+  });
+
+  /* ── спільна картинка: пейзаж із будиночком + легкий «шум камери» ── */
+  var W = 400, H = 260;
+  var scene = document.createElement("canvas"); scene.width = W; scene.height = H;
+  (function draw(){
+    var c = scene.getContext("2d");
+    var g = c.createLinearGradient(0,0,0,H); g.addColorStop(0,"#5aa7e8"); g.addColorStop(.62,"#cfe8fb"); g.addColorStop(.62,"#7cc26b"); g.addColorStop(1,"#3f8f3a");
+    c.fillStyle = g; c.fillRect(0,0,W,H);
+    c.fillStyle = "#ffd54a"; c.beginPath(); c.arc(330,55,30,0,7); c.fill();
+    c.fillStyle = "#6fae5c"; c.beginPath(); c.moveTo(0,170); c.quadraticCurveTo(120,110,250,165); c.lineTo(250,260); c.lineTo(0,260); c.fill();
+    c.fillStyle = "#ffffff"; [[60,40],[150,62],[250,35]].forEach(function(p){ c.beginPath(); c.ellipse(p[0],p[1],34,12,0,0,7); c.fill(); });
+    c.fillStyle = "#f2e2c4"; c.fillRect(150,140,90,70);
+    c.fillStyle = "#c0392b"; c.beginPath(); c.moveTo(140,142); c.lineTo(195,100); c.lineTo(250,142); c.fill();
+    c.fillStyle = "#3a6fb0"; c.fillRect(165,158,22,20); c.fillRect(205,158,22,20);
+    c.fillStyle = "#7a4a22"; c.fillRect(188,182,16,28);
+    c.fillStyle = "#6b4423"; c.fillRect(300,150,10,50);
+    c.fillStyle = "#2f7a33"; c.beginPath(); c.arc(305,135,28,0,7); c.fill();
+    c.strokeStyle = "#1c3a5a"; c.lineWidth = 2; c.beginPath();
+    for (var i=0;i<14;i++){ c.moveTo(20+i*9,225); c.lineTo(24+i*9,212); } c.stroke();
+    var d = c.getImageData(0,0,W,H), a = d.data, s = 12345;
+    for (var k=0;k<a.length;k+=4){ s = (s*1103515245 + 12345) & 0x7fffffff; var n = (s % 13) - 6; a[k]+=n; a[k+1]+=n; a[k+2]+=n; }
+    c.putImageData(d,0,0);
+  })();
+  function toBlob(type, q){ return new Promise(function(res){ scene.toBlob(res, type, q); }); }
+
+  /* ── 1. втрата ── */
+  var pngBytes = 0, jpgUrl = null;
+  toBlob("image/png").then(function(b){ pngBytes = b.size; $("pngSize").textContent = kb(b.size); updJpg(); });
+  function updJpg(){
+    var q = +$("q").value; $("qv").textContent = q;
+    toBlob("image/jpeg", q/100).then(function(b){
+      $("jpgSize").textContent = kb(b.size);
+      if (pngBytes) $("jpgRatio").textContent = x(pngBytes / b.size);
+      if (jpgUrl) URL.revokeObjectURL(jpgUrl);
+      jpgUrl = URL.createObjectURL(b); $("jpgImg").src = jpgUrl;
+    });
+  }
+  $("q").addEventListener("input", updJpg);
+
+  function esc(s){ return s.replace(/[&<>"]/g, function(ch){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]; }); }
+  function updLoss(){
+    var t = $("lossIn").value, p = +$("loss").value; $("lossv").textContent = p;
+    var chars = Array.from(t), idx = [], s = 7;
+    chars.forEach(function(ch,i){ if (ch !== " ") idx.push(i); });
+    var order = idx.map(function(i){ s = (s*48271) % 2147483647; return [s,i]; }).sort(function(a,b){ return a[0]-b[0]; }).map(function(z){ return z[1]; });
+    var gone = {}; order.slice(0, Math.round(idx.length * p / 100)).forEach(function(i){ gone[i] = 1; });
+    $("lossMarked").innerHTML = chars.map(function(ch,i){ return gone[i] ? '<span class="gone">'+esc(ch)+'</span>' : esc(ch); }).join("");
+    $("lossOut").textContent = chars.filter(function(ch,i){ return !gone[i]; }).join("");
+  }
+  $("loss").addEventListener("input", updLoss); $("lossIn").addEventListener("input", updLoss); updLoss();
+
+  /* ── 2. Морзе ── */
+  var MORSE_EN = {A:".-",B:"-...",C:"-.-.",D:"-..",E:".",F:"..-.",G:"--.",H:"....",I:"..",J:".---",K:"-.-",L:".-..",M:"--",N:"-.",O:"---",P:".--.",Q:"--.-",R:".-.",S:"...",T:"-",U:"..-",V:"...-",W:".--",X:"-..-",Y:"-.--",Z:"--.."};
+  var MORSE_UK = {"А":".-","Б":"-...","В":".--","Г":"--.","Д":"-..","Е":".","Ж":"...-","З":"--..","И":"-.--","І":"..","Й":".---","К":"-.-","Л":".-..","М":"--","Н":"-.","О":"---","П":".--.","Р":".-.","С":"...","Т":"-","У":"..-","Ф":"..-.","Х":"....","Ц":"-.-.","Ч":"---.","Ш":"----","Щ":"--.-","Ь":"-..-","Ю":"..--","Я":".-.-"};
+  var CP1251 = {"Ґ":0xA5,"Є":0xAA,"І":0xB2,"Ї":0xAF};
+  var lang = "en";
+  function code8(ch){
+    if (lang === "en") return ch.charCodeAt(0);
+    if (CP1251[ch] != null) return CP1251[ch];
+    var c = ch.charCodeAt(0); if (c >= 0x410 && c <= 0x42F) return c - 0x410 + 0xC0; return null;
+  }
+  function bin8(n){ return ("00000000" + n.toString(2)).slice(-8); }
+  function pretty(sig){ return sig.split("").map(function(z){ return z === "." ? "·" : "—"; }).join(" "); }
+  function updMorse(){
+    var TABLE = lang === "en" ? MORSE_EN : MORSE_UK;
+    var raw = Array.from($("mIn").value.toUpperCase());
+    var rows = [], letters = 0, sig = 0, missing = [], stream = [], bits = [];
+    raw.forEach(function(ch){
+      if (ch === " ") return;
+      var m = TABLE[ch], c = code8(ch);
+      if (!m || c == null){ if (missing.indexOf(ch) < 0) missing.push(ch); return; }
+      letters++; sig += m.length; stream.push(pretty(m)); bits.push(bin8(c));
+      rows.push("<tr><td class='big'>"+esc(ch)+"</td><td class='sig'>"+pretty(m)+"</td><td class='bits'>"+bin8(c)+"</td></tr>");
+    });
+    $("mBody").innerHTML = rows.join("");
+    $("mLetters").textContent = letters; $("mBits").textContent = letters * 8; $("mSig").textContent = sig;
+    $("mCodeName").textContent = lang === "en" ? "ASCII: бітів" : "Windows-1251: бітів";
+    $("mColName").textContent = lang === "en" ? "ASCII, 8 бітів" : "Windows-1251, 8 бітів";
+    $("mMissing").textContent = missing.length ? "Цих символів у таблиці стенду немає, їх пропущено: " + missing.join(" ") : "";
+    $("mStream").textContent = stream.map(function(s){ return s.replace(/ /g,""); }).join("") || "—";
+    $("bStream").innerHTML = bits.length ? bits.join('<span class="cut"></span>') : "—";
+  }
+  document.querySelectorAll("[data-lang]").forEach(function(b){
+    b.addEventListener("click", function(){
+      lang = b.dataset.lang;
+      document.querySelectorAll("[data-lang]").forEach(function(o){ o.setAttribute("aria-pressed", o === b ? "true" : "false"); });
+      updMorse();
+    });
+  });
+  document.querySelectorAll("[data-w]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var w = b.dataset.w, uk = /[А-ЯІЇЄҐ]/.test(w);
+      lang = uk ? "uk" : "en";
+      document.querySelectorAll("[data-lang]").forEach(function(o){ o.setAttribute("aria-pressed", o.dataset.lang === lang ? "true" : "false"); });
+      $("mIn").value = w; updMorse();
+    });
+  });
+  $("mIn").addEventListener("input", updMorse);
+  $("mPuzzle").addEventListener("click", function(){
+    $("mReadings").innerHTML =
+      '<span class="reading">одна літера <b>A</b> = · —</span>' +
+      '<span class="reading">дві літери <b>E</b> + <b>T</b> = · і —</span>' +
+      '<p class="hint">Телеграфіст розрізняє їх за паузою. У потоці нулів та одиниць пауз немає.</p>';
+  });
+  updMorse();
+
+  /* ── 3. повтори (спрощений LZ77) ── */
+  var PRE = {
+    "bib": "Бабин біб розцвів у дощ, буде бабі біб у борщ. Бабин біб розцвів у дощ, буде бабі біб у борщ.",
+    "ha": "ха-ха-ха-ха-ха-ха-ха-ха-ха-ха-ха-ха",
+    "rnd": null
+  };
+  function rnd(){ var a = "абвгґдеєжзиіїйклмнопрстуфхцчшщьюя", s = ""; for (var i=0;i<48;i++) s += a[Math.floor(Math.random()*a.length)]; return s; }
+  var HL = ["--hl1","--hl2","--hl3","--hl4","--hl5"];
+  var toks = [], shown = 0, src = [];
+  function lz(t){
+    src = Array.from(t); var out = [], i = 0, n = src.length;
+    while (i < n){
+      var best = 0, dist = 0;
+      for (var j = 0; j < i; j++){
+        var L = 0; while (i+L < n && src[j+L] === src[i+L] && L < 80) L++;
+        if (L > best){ best = L; dist = i - j; }
+      }
+      if (best >= 4){ out.push({ref:1, d:dist, l:best, at:i}); i += best; }
+      else { out.push({ref:0, ch:src[i], at:i}); i++; }
+    }
+    return out;
+  }
+  function renderLz(){
+    var s = "", o = "", cost = 0, done = 0, ci = 0;
+    for (var k = 0; k < toks.length; k++){
+      var tk = toks[k], vis = k < shown;
+      if (tk.ref){
+        var col = HL[ci++ % HL.length], txt = esc(src.slice(tk.at, tk.at+tk.l).join(""));
+        s += vis ? '<span class="m" style="background:var('+col+')">'+txt+'</span>' : '<span class="todo">'+txt+'</span>';
+        if (vis){ o += '<span class="ref" style="background:var('+col+')">↩ '+tk.d+' · '+tk.l+'</span>'; cost += 2; done += tk.l; }
+      } else {
+        s += vis ? esc(tk.ch) : '<span class="todo">'+esc(tk.ch)+'</span>';
+        if (vis){ o += esc(tk.ch); cost += 1; done += 1; }
+      }
+    }
+    $("lzSrc").innerHTML = s; $("lzOut").innerHTML = o || '<span class="todo">натисніть «Крок ▶»</span>';
+    $("lzN").textContent = done; $("lzM").textContent = cost;
+    $("lzK").textContent = cost ? (done/cost).toFixed(2).replace(".", ",") : "—";
+    $("lzStep").disabled = shown >= toks.length;
+  }
+  function loadLz(t){ $("lzIn").value = t; toks = lz(t); shown = 0; renderLz(); }
+  function stepLz(){
+    // один крок = пройти всі літери до наступної позначки й саму позначку
+    do { shown++; } while (shown < toks.length && !toks[shown-1].ref);
+    renderLz();
+  }
+  document.querySelectorAll("[data-p]").forEach(function(b){
+    b.addEventListener("click", function(){ loadLz(PRE[b.dataset.p] || rnd()); });
+  });
+  $("lzIn").addEventListener("input", function(){ toks = lz($("lzIn").value); shown = 0; renderLz(); });
+  $("lzStep").addEventListener("click", stepLz);
+  $("lzAll").addEventListener("click", function(){ shown = toks.length; renderLz(); });
+  $("lzReset").addEventListener("click", function(){ shown = 0; renderLz(); });
+  loadLz(PRE["bib"]);
+
+  /* ── 4. справжній deflate ── */
+  var TEXT = [
+    "Стиснення даних — це перекодування, яке роблять для того, щоб зменшити розмір файлу. Зміст лишається тим самим, а змінюється лише спосіб запису.",
+    "Архіватор читає файл і шукає в ньому повтори: ті самі слова, ті самі літери, ті самі пробіли. Кожен повтор він замінює короткою позначкою, яка каже, звідки взяти вже записаний шматок.",
+    "У звичайному тексті повторів дуже багато. Слова «і», «що», «це», «як», «на», «у» трапляються в кожному абзаці, а довгі слова повторюються з тими самими закінченнями. Саме тому документи, таблиці й програмний код стискаються в кілька разів.",
+    "Фото у форматі jpg уже стиснуте ще в момент збереження, до того ж із втратою. Камера викинула дрібні відтінки, яких око не помічає, і повторів у файлі майже не лишилося. Тому архіватору там скорочувати вже нічого.",
+    "Звідси практичне правило. Документи, таблиці й програмний код архівувати є сенс, і великий. А фото, музику й відео архівувати майже немає сенсу, бо вони вже стиснуті своїм форматом.",
+    "Резервне копіювання дані не стискає. Воно просто автоматично робить копії, щоб важливі файли існували щонайменше у двох місцях: на комп'ютері і ще десь — на іншому диску, у хмарі або в архіві."
+  ].join("\n\n");
+  function rawBmp(){
+    var d = scene.getContext("2d").getImageData(0,0,W,H).data, out = new Uint8Array(54 + W*H*3), p = 54;
+    for (var i=0;i<d.length;i+=4){ out[p++]=d[i+2]; out[p++]=d[i+1]; out[p++]=d[i]; }
+    out[0]=66; out[1]=77; return out;
+  }
+  function deflate(bytes){
+    var cs = new CompressionStream("deflate-raw");
+    var stream = new Blob([bytes]).stream().pipeThrough(cs);
+    return new Response(stream).arrayBuffer().then(function(b){ return b.byteLength; });
+  }
+  function card(id, title, sub){
+    return '<div class="card" id="'+id+'"><h2>'+title+'</h2><p class="hint" style="margin-top:0">'+sub+'</p>' +
+      '<div class="l hint">до архівування</div><div class="barwrap"><div class="bar" style="width:100%"></div></div><div class="num" data-b>—</div>' +
+      '<div class="l hint" style="margin-top:8px">в архіві</div><div class="barwrap"><div class="bar after" style="width:0"></div></div><div class="num" data-a>—</div>' +
+      '<div class="stat" style="margin-top:10px"><div class="l">коефіцієнт</div><div class="v good" data-k>—</div></div></div>';
+  }
+  $("zCards").innerHTML =
+    card("zT","Текст","6 абзаців про стиснення") +
+    card("zJ","Фото в jpg","так його зберігає камера телефона") +
+    card("zB","Те саме фото без стиснення","кожен піксель записано повністю, як у BMP");
+  function fill(id, before, after){
+    var el = $(id);
+    el.querySelector("[data-b]").textContent = kb(before);
+    el.querySelector("[data-a]").textContent = kb(after);
+    el.querySelector(".bar.after").style.width = Math.max(1, after/before*100) + "%";
+    el.querySelector("[data-k]").textContent = (before/after).toFixed(2).replace(".", ",");
+  }
+  $("zGo").addEventListener("click", function(){
+    if (typeof CompressionStream === "undefined"){ $("zState").textContent = "Цей браузер не вміє стискати сам. Відкрийте стенд у Chrome або Edge."; return; }
+    $("zGo").disabled = true; $("zState").textContent = "стискаю…";
+    var t = new TextEncoder().encode(TEXT), b = rawBmp();
+    toBlob("image/jpeg", .85).then(function(j){ return j.arrayBuffer(); }).then(function(jb){
+      var jarr = new Uint8Array(jb);
+      return Promise.all([deflate(t), deflate(jarr), deflate(b)]).then(function(r){
+        fill("zT", t.length, r[0]); fill("zJ", jarr.length, r[1]); fill("zB", b.length, r[2]);
+        $("zState").textContent = "готово"; $("zGo").disabled = false;
+      });
+    }).catch(function(){ $("zState").textContent = "Не вдалося стиснути. Спробуйте ще раз."; $("zGo").disabled = false; });
+  });
+
+  /* ── 5. навчальний Провідник ── */
+  var FILES = [
+    {n:"urok1.txt", b:24290, z:7923}, {n:"urok2.txt", b:21942, z:6743}, {n:"urok3.txt", b:27558, z:8684},
+    {n:"urok4.txt", b:21751, z:6677}, {n:"urok5.txt", b:19597, z:6137}
+  ];
+  var ZIP_BYTES = 36656;
+  var st;
+  function xInit(){ st = {where:"root", zip:false, sel:null, clip:null, pasted:[]}; xRender(); }
+  function kbWin(b){ return Math.ceil(b/1024).toLocaleString("uk-UA") + " КБ"; }
+  function folderBytes(){ return FILES.reduce(function(a,f){ return a+f.b; }, 0); }
+  function kbRound(b){ return Math.round(b/1024).toLocaleString("uk-UA") + " КБ"; }
+  function xRows(){
+    if (st.where === "root"){
+      var r = [{id:"dir", ico:"📁", n:"Тексти", t:"Тека з файлами", sz:""}];
+      if (st.zip) r.push({id:"zip", ico:"🗜️", n:"Тексти.zip", t:"Стиснута тека (zip)", sz:kbWin(ZIP_BYTES)});
+      st.pasted.forEach(function(n){ var f = FILES.filter(function(q){ return q.n === n; })[0]; r.push({id:"p:"+n, ico:"📄", n:n, t:"Текстовий документ", sz:kbWin(f.b)}); });
+      return r;
+    }
+    return FILES.map(function(f){ return {id:"f:"+f.n, ico:"📄", n:f.n, t:"Текстовий документ", sz:kbWin(f.b), f:f}; });
+  }
+  function xRender(){
+    var inZip = st.where === "zip";
+    $("xPath").textContent = st.where === "root" ? "Демо" : (inZip ? "Демо  ›  Тексти.zip" : "Демо  ›  Тексти");
+    $("xBack").disabled = st.where === "root";
+    $("xCopy").disabled = !(st.sel && st.sel.indexOf("f:") === 0);
+    $("xPaste").disabled = !(st.clip && st.where === "root");
+    $("xHead").innerHTML = inZip
+      ? "<tr><th>Ім'я</th><th>Тип</th><th style='text-align:right'>Стиснутий розмір</th><th style='text-align:right'>Розмір</th><th style='text-align:right'>Економія</th></tr>"
+      : "<tr><th>Ім'я</th><th>Тип</th><th style='text-align:right'>Розмір</th></tr>";
+    var rows = xRows();
+    $("xBody").innerHTML = rows.map(function(r){
+      var cls = "item" + (st.sel === r.id ? " sel" : "");
+      if (inZip) return "<tr class='"+cls+"' data-id='"+r.id+"'><td><span class='ico'>"+r.ico+"</span>"+esc(r.n)+"</td><td>"+r.t+"</td><td class='r'>"+kbWin(r.f.z)+"</td><td class='r'>"+r.sz+"</td><td class='r'>"+Math.round((1 - r.f.z/r.f.b)*100)+" %</td></tr>";
+      return "<tr class='"+cls+"' data-id='"+r.id+"'><td><span class='ico'>"+r.ico+"</span>"+esc(r.n)+"</td><td>"+r.t+"</td><td class='r'>"+r.sz+"</td></tr>";
+    }).join("");
+    var msg = "";
+    if (st.where === "root") msg = st.zip ? "Тека «Тексти» — " + kbRound(folderBytes()) + ", архів «Тексти.zip» — " + kbWin(ZIP_BYTES) + ". Архів менший приблизно в " + (folderBytes()/ZIP_BYTES).toFixed(1).replace(".", ",") + " раза." : "Клацніть правою кнопкою на теці «Тексти».";
+    else if (inZip) msg = "Це архів, а виглядає як звичайна тека: файли можна відкрити й скопіювати без жодного архіватора.";
+    else msg = "5 текстових файлів, разом " + kbRound(folderBytes()) + ".";
+    if (st.clip) msg += "  Скопійовано: " + st.clip + ".";
+    $("xStatus").textContent = msg;
+  }
+  function xOpen(id){
+    if (id === "dir"){ st.where = "dir"; st.sel = null; }
+    else if (id === "zip"){ st.where = "zip"; st.sel = null; }
+    xRender();
+  }
+  function menu(x, y, items){
+    var m = $("xMenu");
+    m.innerHTML = items.map(function(it, i){ return it === "-" ? "<hr>" : "<div data-i='"+i+"' class='"+(it.off ? "off" : "")+"'>"+it.t+"</div>"; }).join("");
+    m.hidden = false;
+    m.style.left = Math.min(x, window.innerWidth - 300) + "px"; m.style.top = Math.min(y, window.innerHeight - 20 - items.length*40) + "px";
+    m.onclick = function(e){ var d = e.target.closest("[data-i]"); if (!d) return; var it = items[+d.dataset.i]; if (it.off) return; m.hidden = true; it.go(); };
+  }
+  function xMenuFor(id, x, y){
+    var none = function(){};
+    if (id === "dir") menu(x, y, [
+      {t:"Відкрити", go:function(){ xOpen("dir"); }},
+      "-",
+      {t:"Стиснути в ZIP-файл", go:function(){ st.zip = true; st.sel = "zip"; xRender(); }},
+      {t:"Надіслати ⇒ Стиснута папка (zip)", go:function(){ st.zip = true; st.sel = "zip"; xRender(); }},
+      "-", {t:"Видалити", off:true, go:none}]);
+    else if (id === "zip") menu(x, y, [
+      {t:"Відкрити", go:function(){ xOpen("zip"); }},
+      {t:"Видобути все…", off:true, go:none},
+      "-", {t:"Видалити", off:true, go:none}]);
+    else if (id.indexOf("f:") === 0) menu(x, y, [
+      {t:"Копіювати", go:function(){ st.clip = id.slice(2); xRender(); }},
+      "-", {t:"Видалити", off:true, go:none}]);
+    else if (id === "bg" && st.where === "root") menu(x, y, [
+      {t:"Вставити", off:!st.clip, go:function(){ if (st.pasted.indexOf(st.clip) < 0) st.pasted.push(st.clip); st.sel = "p:" + st.clip; xRender(); }}]);
+  }
+  function xSelect(id){
+    st.sel = id;
+    $("xBody").querySelectorAll("tr[data-id]").forEach(function(r){ r.classList.toggle("sel", r.dataset.id === id); });
+    $("xCopy").disabled = !(id && id.indexOf("f:") === 0);
+  }
+  $("xBody").addEventListener("click", function(e){ var tr = e.target.closest("tr[data-id]"); if (tr) xSelect(tr.dataset.id); });
+  $("xBody").addEventListener("dblclick", function(e){ var tr = e.target.closest("tr[data-id]"); if (tr) xOpen(tr.dataset.id); });
+  $("xWin").addEventListener("contextmenu", function(e){
+    e.preventDefault();
+    var tr = e.target.closest("tr[data-id]");
+    var id = tr ? tr.dataset.id : "bg";
+    if (tr) xSelect(id);
+    xMenuFor(id, e.clientX, e.clientY);
+  });
+  document.addEventListener("click", function(e){ if (!e.target.closest("#xMenu")) $("xMenu").hidden = true; });
+  $("xBack").addEventListener("click", function(){ st.where = "root"; st.sel = null; xRender(); });
+  $("xReset").addEventListener("click", xInit);
+  $("xCopy").addEventListener("click", function(){ if (st.sel && st.sel.indexOf("f:") === 0){ st.clip = st.sel.slice(2); xRender(); } });
+  $("xPaste").addEventListener("click", function(){ if (st.clip && st.where === "root"){ if (st.pasted.indexOf(st.clip) < 0) st.pasted.push(st.clip); st.sel = "p:" + st.clip; xRender(); } });
+  xInit();
+})();
+</script>
+</body>
+</html>
