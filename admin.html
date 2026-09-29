@@ -343,7 +343,7 @@ function renderKey(){
   const k = gameKeys.find(x=>x.slug===el('kGame').value); if(!k){ el('kBody').innerHTML=''; return; }
   const d = k.data;
   // Тексти питань — HTML із нашої ж гри (<code>, <b>), тому вставляються як розмітка.
-  let h = `<p style="margin:10px 0 0">Зірочок: <b>${d.stars}</b>. Кожна помилкова відповідь знімає одну зірочку; далі учень не піде, поки не дасть правильну. Бал 1–12 рахує сервер за відсотком зірочок.${d.rounds.some(r=>r.type==='num') ? ' У числових завданнях вводити <b>тільки число</b>, без одиниць і пробілів.' : ''}</p>`;
+  let h = `<p style="margin:10px 0 0">Максимум очок: <b>${d.max||d.stars}</b>. Кожна помилкова відповідь знімає одне очко; далі учень не піде, поки не дасть правильну. Бал 1–12 рахує сервер за відсотком очок.${d.rounds.some(r=>r.type==='num') ? ' У числових завданнях вводити <b>тільки число</b>, без одиниць і пробілів.' : ''}</p>`;
   d.rounds.forEach(r=>{
     h += `<div class="kround"><h3>Раунд ${r.n}. ${r.task}</h3>`;
     if(r.hint) h += `<div class="muted">Підказка в грі: ${r.hint}</div>`;
@@ -362,6 +362,21 @@ function renderKey(){
     else if(r.type==='sort'){
       h += `<div class="muted">Зірочки № ${r.stars[0]}–${r.stars[1]}: розкласти по групах «${(r.folders||[]).join('» / «')}».</div>`;
       r.items.forEach(it=>{ h += `<div class="kq"><b>${it.n}</b> → <span class="yes">${esc(it.f)}</span>${it.why?' <span class="muted">('+it.why+')</span>':''}</div>`; });
+    }
+    else if(r.type==='choice'){
+      h += `<div class="muted">Зірочки № ${r.stars[0]}–${r.stars[1]}: до кожного опису натиснути правильну кнопку.</div>`;
+      r.items.forEach((it,i)=>{ h += `<div class="kq"><b>${i+1}.</b> ${it.q} → <span class="yes">${esc(it.a)}</span></div>`; });
+    }
+    else if(r.type==='seq'){
+      h += `<div class="muted">Зірочки № ${r.stars[0]}–${r.stars[1]}: одне очко за питання.</div>`;
+      r.items.forEach((it,i)=>{
+        h += `<div class="kq"><b>${i+1}.</b> ${it.q}${it.multi?' <span class="muted">(позначити всі правильні)</span>':''}<ul style="margin:4px 0 0;padding-left:20px">`
+          + it.opts.map(o=>`<li>${o.ok?'<span class="yes">✓ '+o.t+'</span>':'<span class="no">✕</span> '+o.t}${o.why?' <span class="muted">('+o.why+')</span>':''}</li>`).join('') + '</ul></div>';
+      });
+    }
+    else if(r.type==='steps'){
+      h += `<div class="muted">Зірочки № ${r.stars[0]}–${r.stars[1]}: виконати по кроках.</div>`;
+      r.items.forEach((it,i)=>{ h += `<div class="kq"><b>Крок ${i+1}.</b> ${esc(it.n)}</div>`; });
     }
     else if(r.type==='order'){
       h += `<div class="muted">Зірочки № ${r.stars[0]}–${r.stars[1]}: натиснути по порядку.</div>`;
@@ -417,6 +432,8 @@ function rightAnswer(slug, m){
     for(const it of (r.items||[])){
       if(r.type==='num' && plain(it.q)===m.q) return it.a + (it.u?' '+it.u:'');
       if(r.type==='sort' && plain(it.n)===m.q) return '→ '+it.f;
+      if(r.type==='choice' && plain(it.q)===m.q) return it.a;
+      if(r.type==='seq' && plain(it.q)===m.q) return it.opts.filter(o=>o.ok).map(o=>plain(o.t)).join('; ');
     }
   }
   return '';
