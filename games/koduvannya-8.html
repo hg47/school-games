@@ -98,7 +98,13 @@
           inp.disabled=true; chk.disabled=true;
           i++;
           if(i>=cfg.items.length){ bit(cfg.win); done(); }
-          else setTimeout(render, 900);
+          else {
+            // ⚠️ Без автопереходу: наступне питання схоже на попереднє (байти → біти),
+            //    і учні, не помітивши підміни, вводили стару відповідь ще раз.
+            const nb=document.createElement("button"); nb.className="btn"; nb.style.marginTop="12px";
+            nb.textContent="Наступне завдання →"; nb.onclick=render;
+            vd.appendChild(document.createElement("br")); vd.appendChild(nb); try{ nb.focus(); }catch(e){}
+          }
         } else {
           mistakes++;
           vd.innerHTML='<b style="color:var(--bad)">Ні.</b> ' + it.tip;
