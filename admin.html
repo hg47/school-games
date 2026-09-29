@@ -143,7 +143,7 @@
     <!-- КЛЮЧІ -->
     <div class="panel" id="tab-keys">
       <div class="card">
-        <div class="row between"><b>Ключ відповідей</b><select id="kGame"></select></div>
+        <div class="row between"><b>Ключ відповідей</b><select id="kGame" autocomplete="off"></select></div>
         <p class="muted" style="margin:6px 0 0">Тільки для вчителя: учні цю таблицю не бачать. Ключ зібрано з коду самої гри.</p>
         <div id="kMsg" class="msg"></div>
         <div id="kBody"></div>
@@ -320,15 +320,17 @@ async function loadKeys(){
   if(!gameKeys.length){ msg('kMsg', 'Ключів поки немає: виконайте supabase/16_game_keys.sql.', 'err'); return; }
   const title = s => (games.find(g=>g.slug===s)||{}).title || s;
   el('kGame').innerHTML = gameKeys.map(k=>`<option value="${esc(k.slug)}">${esc(title(k.slug))}</option>`).join('');
-  const pref = gameKeys.find(k=>k.slug==='koduvannya-8'); if(pref) el('kGame').value = pref.slug;
+  // Остання відкрита гра запам'ятовується; перший раз — «Кодування 8».
+  let last = 'koduvannya-8'; try{ last = localStorage.getItem('admin-key-game') || last; }catch(e){}
+  if(gameKeys.some(k=>k.slug===last)) el('kGame').value = last;
   renderKey();
 }
-el('kGame').onchange = () => renderKey();
+el('kGame').onchange = () => { try{ localStorage.setItem('admin-key-game', el('kGame').value); }catch(e){} renderKey(); };
 function renderKey(){
   const k = gameKeys.find(x=>x.slug===el('kGame').value); if(!k){ el('kBody').innerHTML=''; return; }
   const d = k.data;
   // Тексти питань — HTML із нашої ж гри (<code>, <b>), тому вставляються як розмітка.
-  let h = `<p style="margin:10px 0 0">Зірочок: <b>${d.stars}</b>. Кожна помилкова відповідь знімає одну зірочку; далі учень не піде, поки не дасть правильну. Бал 1–12 рахує сервер за відсотком зірочок. Вводити <b>тільки число</b>, без одиниць і пробілів.</p>`;
+  let h = `<p style="margin:10px 0 0">Зірочок: <b>${d.stars}</b>. Кожна помилкова відповідь знімає одну зірочку; далі учень не піде, поки не дасть правильну. Бал 1–12 рахує сервер за відсотком зірочок.${d.rounds.some(r=>r.type==='num') ? ' У числових завданнях вводити <b>тільки число</b>, без одиниць і пробілів.' : ''}</p>`;
   d.rounds.forEach(r=>{
     h += `<div class="kround"><h3>Раунд ${r.n}. ${r.task}</h3>`;
     if(r.hint) h += `<div class="muted">Підказка в грі: ${r.hint}</div>`;
