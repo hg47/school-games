@@ -48,6 +48,13 @@
   .tab:hover{background:var(--surface-2); color:var(--ink)}
   .tab.on{background:var(--btn-grad); color:#fff; box-shadow:var(--sh1)}
   .tab:focus-visible{outline:2px solid var(--brand); outline-offset:1px}
+  .kround{margin-top:var(--s4)}
+  .kround h3{margin:0 0 4px; font-size:var(--fs-md)}
+  .kq{border-top:1px solid var(--line); padding:10px 0}
+  .kq .ans{font-size:1.35em; font-weight:800; color:var(--ok); white-space:nowrap}
+  .kq .trap{margin-top:4px; color:var(--bad)}
+  .kq .no{color:var(--bad)} .kq .yes{color:var(--ok); font-weight:700}
+  .kq code{font-size:1.05em}
   .panel{display:none} .panel.on{display:block}
 
   .msg{display:none; padding:10px 12px; margin:var(--s3) 0;
@@ -91,6 +98,7 @@
       <button class="tab on" data-tab="students">Учні</button>
       <button class="tab" data-tab="codes">Коди</button>
       <button class="tab" data-tab="results">Результати</button>
+      <button class="tab" data-tab="keys">Ключі</button>
     </div>
 
     <!-- УЧНІ -->
@@ -129,6 +137,16 @@
       <div class="card">
         <div class="row between"><b>Наявні коди</b><span class="muted" id="codesCount"></span></div>
         <table style="margin-top:8px"><thead><tr><th>Код</th><th>Клас</th><th>ПІБ</th><th>Гра</th><th>Спроб</th></tr></thead><tbody id="codesBody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- КЛЮЧІ -->
+    <div class="panel" id="tab-keys">
+      <div class="card">
+        <div class="row between"><b>Ключ відповідей</b><select id="kGame"></select></div>
+        <p class="muted" style="margin:6px 0 0">Тільки для вчителя: учні цю таблицю не бачать. Ключ зібрано з коду самої гри.</p>
+        <div id="kMsg" class="msg"></div>
+        <div id="kBody"></div>
       </div>
     </div>
 
@@ -178,7 +196,7 @@ el('logout').onclick = async () => { await sb.auth.signOut(); location.reload();
 async function enterApp(session){
   el('whoami').textContent = session.user.email;
   show('appView');
-  await loadGames(); await loadStudents(); await loadCodes(); await loadResults();
+  await loadGames(); await loadStudents(); await loadCodes(); await loadResults(); await loadKeys();
 }
 
 // ── таби ──
@@ -292,6 +310,52 @@ el('genCodes').onclick = async () => {
     data.map(r=>`<tr><td>${esc(r.r_name)}</td><td><span class="code">${esc(r.r_code)}</span></td></tr>`).join('')+'</tbody></table>';
   await loadCodes();
 };
+
+// ── ключі відповідей ──
+let gameKeys = [];
+async function loadKeys(){
+  const { data, error } = await sb.from('game_keys').select('slug,data,updated_at').order('slug');
+  if(error){ msg('kMsg', 'Таблиці ключів ще немає: виконайте supabase/16_game_keys.sql у SQL Editor. ('+error.message+')', 'err'); return; }
+  gameKeys = data||[];
+  if(!gameKeys.length){ msg('kMsg', 'Ключів поки немає: виконайте supabase/16_game_keys.sql.', 'err'); return; }
+  const title = s => (games.find(g=>g.slug===s)||{}).title || s;
+  el('kGame').innerHTML = gameKeys.map(k=>`<option value="${esc(k.slug)}">${esc(title(k.slug))}</option>`).join('');
+  const pref = gameKeys.find(k=>k.slug==='koduvannya-8'); if(pref) el('kGame').value = pref.slug;
+  renderKey();
+}
+el('kGame').onchange = () => renderKey();
+function renderKey(){
+  const k = gameKeys.find(x=>x.slug===el('kGame').value); if(!k){ el('kBody').innerHTML=''; return; }
+  const d = k.data;
+  // Тексти питань — HTML із нашої ж гри (<code>, <b>), тому вставляються як розмітка.
+  let h = `<p style="margin:10px 0 0">Зірочок: <b>${d.stars}</b>. Кожна помилкова відповідь знімає одну зірочку; далі учень не піде, поки не дасть правильну. Бал 1–12 рахує сервер за відсотком зірочок. Вводити <b>тільки число</b>, без одиниць і пробілів.</p>`;
+  d.rounds.forEach(r=>{
+    h += `<div class="kround"><h3>Раунд ${r.n}. ${r.task}</h3>`;
+    if(r.hint) h += `<div class="muted">Підказка в грі: ${r.hint}</div>`;
+    if(r.type==='num') r.items.forEach((it,i)=>{
+      h += `<div class="kq"><div class="row between" style="align-items:flex-start"><div>
+          <span class="muted">№ ${it.star} · завдання ${i+1}</span><br>${it.q}</div>
+          <div class="ans">${esc(it.a)}${it.u?' <span class="muted" style="font-weight:400;font-size:.7em">'+esc(it.u)+'</span>':''}</div></div>
+        ${it.calc?`<div>Розрахунок: <b>${it.calc}</b></div>`:''}
+        ${it.tip?`<div class="muted">Що гра пише після помилки: ${it.tip}</div>`:''}
+        ${it.trap?`<div class="trap">⚠️ Типова помилка: ${esc(it.trap)}</div>`:''}</div>`;
+    });
+    else if(r.type==='pick'){
+      h += `<div class="muted">Зірочки № ${r.stars[0]}–${r.stars[1]}: позначити всі правильні.</div>`;
+      r.items.forEach(it=>{ h += `<div class="kq">${it.ok?'<span class="yes">✓ правильна</span>':'<span class="no">✕ хибна</span>'} — <b>${it.n}</b>${it.why?' <span class="muted">('+it.why+')</span>':''}</div>`; });
+    }
+    else if(r.type==='sort'){
+      h += `<div class="muted">Зірочки № ${r.stars[0]}–${r.stars[1]}: розкласти по групах «${(r.folders||[]).join('» / «')}».</div>`;
+      r.items.forEach(it=>{ h += `<div class="kq"><b>${it.n}</b> → <span class="yes">${esc(it.f)}</span>${it.why?' <span class="muted">('+it.why+')</span>':''}</div>`; });
+    }
+    else if(r.type==='order'){
+      h += `<div class="muted">Зірочки № ${r.stars[0]}–${r.stars[1]}: натиснути по порядку.</div>`;
+      r.items.forEach((it,i)=>{ h += `<div class="kq"><b>${i+1}.</b> ${it.n}</div>`; });
+    }
+    h += `</div>`;
+  });
+  el('kBody').innerHTML = h;
+}
 
 // ── результати ──
 let summaryRows=[];
