@@ -46,6 +46,12 @@
   const $ = id => document.getElementById(id);
   const stage=$("stage"), say=$("say"), nextBtn=$("next"), starsEl=$("stars"), dotsEl=$("dots");
   let stars=0, round=0, mistakes=0;
+  // ⭐ Журнал помилок: де саме учень помилився. Іде в results.details,
+  //    вчитель бачить його в адмінці («Результати» → розгорнути рядок).
+  const MLOG=[];
+  const miss=(q,v)=>{ mistakes++; if(MLOG.length<300) MLOG.push({r:round+1,
+    q:String(q==null?"":q).replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim().slice(0,200),
+    v:String(v==null?"":v).replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim().slice(0,80)}); };
   const TOTAL_ROUNDS=4;
 
   // крапки-прогрес
@@ -102,7 +108,7 @@
           else bit("Правильно! Клас 👍 Наступний файл?");
         } else {
           d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300);
-          mistakes++; bit(`Хм, <b>${sel.n}</b> сюди не пасує. Подумай: це навчання, гра чи медіа?`);
+          miss(sel.n, "→ "+d.querySelector(".fname").textContent); bit(`Хм, <b>${sel.n}</b> сюди не пасує. Подумай: це навчання, гра чи медіа?`);
         }
       };
       d.onclick=act; d.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();act();}};
@@ -133,7 +139,7 @@
         else { const bx=b.querySelector(".pbox"); b.classList.add("err");
           if(bx) bx.textContent="\u2715";
           setTimeout(()=>{ b.classList.remove("err"); if(bx) bx.textContent="\u2713"; },900);
-          mistakes++; bit(`Ні! У цьому імені є заборонений символ «<b>${it.s}</b>» — так файл назвати не можна.`); }
+          miss(it.n, "позначено хибну"); bit(`Ні! У цьому імені є заборонений символ «<b>${it.s}</b>» — так файл назвати не можна.`); }
       };
       pool.appendChild(b);
     });
@@ -163,7 +169,7 @@
             if(qi<q.length){ bit("Точно! 🔥"); setTimeout(render,550); }
             else { bit("Ти знаєш усі операції над файлами! 💪"); done(); } }
           else { b.classList.add("err"); setTimeout(()=>b.classList.remove("err"),400);
-            mistakes++; bit("Не зовсім. Перечитай опис уважно 👀"); }
+            miss(q[qi].t, o); bit("Не зовсім. Перечитай опис уважно 👀"); }
         };
         box.appendChild(b);
       });
@@ -200,7 +206,7 @@
     const binAct=()=>{
       if(phase===1){
         if(!sel){ bit("Спочатку торкнись файла, який хочеш видалити."); return; }
-        if(sel.f.keep){ mistakes++; bit("Обережно! <b>реферат.docx</b> потрібний. Видаляємо <b>сміття.tmp</b>."); return; }
+        if(sel.f.keep){ miss("Кошик", "реферат.docx"); bit("Обережно! <b>реферат.docx</b> потрібний. Видаляємо <b>сміття.tmp</b>."); return; }
         // видаляємо сміття
         files.splice(files.indexOf(sel.f),1); inBin=true; bincnt.textContent="1 файл (сміття.tmp)";
         drawPool(); sel=null; addStar();
@@ -241,14 +247,14 @@
         <p>${note}</p>
         ${canRetry ? '<button class="btn" id="again">\u0421\u043f\u0440\u043e\u0431\u0443\u0432\u0430\u0442\u0438 \u0449\u0435 \u0440\u0430\u0437 \u21BA</button>' : '<button class="btn ghost" id="home">\u0412\u0438\u0439\u0442\u0438 \u21A9</button>'}
       </div>`;
-      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; starsEl.textContent=0;
+      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; MLOG.length=0; starsEl.textContent=0;
         document.querySelector(".card .actions").style.display="flex";
         nextBtn.textContent="\u041f\u043e\u0447\u0430\u0442\u0438 \u2192"; nextBtn.disabled=false; paintDots();
         say.innerHTML="\u0429\u0435 \u0441\u043f\u0440\u043e\u0431\u0430 \u2014 \u043f\u043e\u043a\u0430\u0436\u0438 \u043c\u0430\u043a\u0441\u0438\u043c\u0443\u043c! \uD83D\uDE80"; stage.innerHTML=""; };
       const home=$("home"); if(home) home.onclick=()=>{ location.href="../index.html"; };
     };
     if(window.submitResult){
-      window.submitResult(earned).then(res=>{
+      window.submitResult(earned, {mistakes:MLOG}).then(res=>{
         if(res && res.ok){
           finish(res.grade, (res.remaining!=null?res.remaining:0),
             (res.remaining>0 ? ("\u0417\u0430\u043b\u0438\u0448\u0438\u043b\u043e\u0441\u044c \u0441\u043f\u0440\u043e\u0431: "+res.remaining+" \u2014 \u043c\u043e\u0436\u0435\u0448 \u043f\u043e\u043a\u0440\u0430\u0449\u0438\u0442\u0438.") : "\u0421\u043f\u0440\u043e\u0431\u0438 \u0432\u0438\u043a\u043e\u0440\u0438\u0441\u0442\u0430\u043d\u043e. \u0417\u0430\u0440\u0430\u0445\u043e\u0432\u0430\u043d\u043e \u043d\u0430\u0439\u043a\u0440\u0430\u0449\u0438\u0439 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442."));

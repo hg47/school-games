@@ -52,6 +52,12 @@
   const $ = id => document.getElementById(id);
   const stage=$("stage"), say=$("say"), nextBtn=$("next"), starsEl=$("stars"), dotsEl=$("dots");
   let stars=0, round=0, mistakes=0;
+  // ⭐ Журнал помилок: де саме учень помилився. Іде в results.details,
+  //    вчитель бачить його в адмінці («Результати» → розгорнути рядок).
+  const MLOG=[];
+  const miss=(q,v)=>{ mistakes++; if(MLOG.length<300) MLOG.push({r:round+1,
+    q:String(q==null?"":q).replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim().slice(0,200),
+    v:String(v==null?"":v).replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim().slice(0,80)}); };
   const TOTAL_ROUNDS=5;
   const MAX=26; // 6 + 6 + 4 + 6 + 4
 
@@ -95,7 +101,7 @@
           if(left===0){ bit(cfg.win); done(); } else bit("Правильно! \u{1F44D} Далі?");
         } else {
           d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300);
-          mistakes++; bit(`Подумай ще: <b>${sel.n}</b> — точно сюди?`);
+          miss(sel.n, "→ "+d.querySelector(".fname").textContent); bit(`Подумай ще: <b>${sel.n}</b> — точно сюди?`);
         }
       };
       d.onclick=act; d.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();act();}};
@@ -124,7 +130,7 @@
         else { const bx=b.querySelector(".pbox"); b.classList.add("err");
           if(bx) bx.textContent="\u2715";
           setTimeout(()=>{ b.classList.remove("err"); if(bx) bx.textContent="\u2713"; },900);
-          mistakes++; bit(`Ні — ${it.s}.`); }
+          miss(it.n, "позначено хибну"); bit(`Ні — ${it.s}.`); }
       };
       pool.appendChild(b);
     });
@@ -164,7 +170,7 @@
           if(i>=cfg.items.length){ bit(cfg.win); done(); }
           else setTimeout(render, 1100);
         } else {
-          mistakes++;
+          miss(it.q, raw);
           vd.innerHTML='<b style="color:var(--bad)">Ні.</b> ' + it.tip;
           try{ inp.select(); }catch(e){}
         }
@@ -319,14 +325,14 @@
         Підсумковий бал за <b>ГР 2 та ГР 3</b> — це <b>середнє двох частин</b>, округлене вгору.</p>
         ${canRetry ? '<button class="btn" id="again">Спробувати ще раз ↺</button>' : '<button class="btn ghost" id="home">Вийти ↩</button>'}
       </div>`;
-      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; starsEl.textContent=0;
+      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; MLOG.length=0; starsEl.textContent=0;
         document.querySelector(".card .actions").style.display="flex";
         nextBtn.textContent="Почати →"; nextBtn.disabled=false; paintDots();
         say.innerHTML="Ще спроба — цього разу читай умови уважніше \u{1F680}"; stage.innerHTML=""; };
       const home=$("home"); if(home) home.onclick=()=>{ location.href="../index.html"; };
     };
     if(window.submitResult){
-      window.submitResult(earned).then(res=>{
+      window.submitResult(earned, {mistakes:MLOG}).then(res=>{
         if(res && res.ok){
           finish(res.grade, (res.remaining!=null?res.remaining:0),
             (res.remaining>0 ? ("Залишилось спроб: "+res.remaining+" — можеш покращити.") : "Спроби використано. Зараховано найкращий результат."));

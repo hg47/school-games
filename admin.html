@@ -48,6 +48,12 @@
   .tab:hover{background:var(--surface-2); color:var(--ink)}
   .tab.on{background:var(--btn-grad); color:#fff; box-shadow:var(--sh1)}
   .tab:focus-visible{outline:2px solid var(--brand); outline-offset:1px}
+  #resBody tr.rrow{cursor:pointer} #resBody tr.rrow:hover td{background:var(--surface-2)}
+  #resBody tr.rrow.open td{background:var(--surface-2)}
+  #resBody tr.rdet td{background:var(--surface-2); padding:6px 14px 14px}
+  .att{margin-top:10px} .att b.t{font-size:var(--fs-md)}
+  .att ul{margin:4px 0 0; padding-left:20px} .att li{margin:3px 0}
+  .att .v{color:var(--bad); font-weight:700} .att .a{color:var(--ok); font-weight:700}
   .kround{margin-top:var(--s4)}
   .kround h3{margin:0 0 4px; font-size:var(--fs-md)}
   .kq{border-top:1px solid var(--line); padding:10px 0}
@@ -157,6 +163,13 @@
           <b>Найкращі результати</b>
           <button class="btn ghost sm" id="exportCsv">Експорт CSV</button>
         </div>
+        <div class="row" style="margin:10px 0 0">
+          <select id="rClass" autocomplete="off"></select>
+          <select id="rGame" autocomplete="off"></select>
+          <input id="rName" placeholder="Пошук за ПІБ" style="width:200px" autocomplete="off">
+          <span class="muted" id="rCount"></span>
+        </div>
+        <p class="muted" style="margin:6px 0 0">Натисніть на рядок, щоб побачити всі спроби й на яких питаннях учень помилився.</p>
         <table style="margin-top:8px"><thead><tr><th>Клас</th><th>ПІБ</th><th>Гра</th><th>Очки в грі</th><th>Кращий бал</th><th>%</th><th>Спроб</th></tr></thead><tbody id="resBody"></tbody></table>
         <p class="muted" style="margin-top:6px">«Очки в грі» — сирий рахунок (правильних / максимум) без округлення в шкалу 1-12. Потрібно, якщо частину оцінки додаєте вручну (напр. відкрите питання поза грою).</p>
         <div id="resMsg" class="msg"></div>
@@ -360,29 +373,71 @@ function renderKey(){
 }
 
 // ── результати ──
-let summaryRows=[];
+let resAll=[], summaryRows=[], shownRows=[], openKey=null;
 async function loadResults(){
   const { data, error } = await sb.from('results')
-    .select('grade,pct,score,max_score,students(full_name,class_label),games(title)')
-    .order('created_at',{ascending:false});
+    .select('id,grade,pct,score,max_score,attempt_no,created_at,details,students(full_name,class_label),games(slug,title)')
+    .order('created_at',{ascending:true});
   if(error){ msg('resMsg', error.message, 'err'); return; }
+  resAll = data||[];
   const map = {};
-  (data||[]).forEach(r=>{
-    const cls=r.students?.class_label||'', pib=r.students?.full_name||'', game=r.games?.title||'';
-    const k=cls+'|'+pib+'|'+game;
-    if(!map[k]) map[k]={cls,pib,game,grade:r.grade||0,pct:r.pct||0,score:r.score||0,maxScore:r.max_score||0,n:1};
-    else{ map[k].n++; if((r.grade||0)>map[k].grade){map[k].grade=r.grade;map[k].pct=r.pct;map[k].score=r.score;map[k].maxScore=r.max_score;} }
+  resAll.forEach(r=>{
+    const cls=r.students?.class_label||'', pib=r.students?.full_name||'(учня видалено)', game=r.games?.title||'', slug=r.games?.slug||'';
+    const k=cls+'|'+pib+'|'+slug;
+    if(!map[k]) map[k]={k,cls,pib,game,slug,grade:r.grade||0,pct:r.pct||0,score:r.score||0,maxScore:r.max_score||0,n:0,att:[]};
+    const m=map[k]; m.n++; m.att.push(r);
+    if((r.grade||0)>m.grade || m.n===1){ m.grade=r.grade||0; m.pct=r.pct||0; m.score=r.score||0; m.maxScore=r.max_score||0; }
   });
   summaryRows = Object.values(map).sort((a,b)=>(a.cls+a.game+a.pib).localeCompare(b.cls+b.game+b.pib));
-  el('resBody').innerHTML = summaryRows.length
-    ? summaryRows.map(r=>`<tr><td>${esc(r.cls)}</td><td>${esc(r.pib)}</td><td>${esc(r.game)}</td>
-        <td>${r.score} / ${r.maxScore}</td><td><b>${r.grade}</b></td><td>${r.pct}%</td><td>${r.n}</td></tr>`).join('')
-    : '<tr><td colspan="7" class="muted">Поки що немає результатів.</td></tr>';
+  const keep = (id, all, list) => { const v=el(id).value; el(id).innerHTML = `<option value="">${all}</option>` + list.map(x=>`<option value="${esc(x[0])}">${esc(x[1])}</option>`).join(''); if(list.some(x=>x[0]===v)) el(id).value=v; };
+  keep('rClass','Усі класи',[...new Set(summaryRows.map(r=>r.cls).filter(Boolean))].sort().map(c=>[c,c]));
+  keep('rGame','Усі ігри',[...new Map(summaryRows.map(r=>[r.slug,r.game])).entries()].sort((a,b)=>a[1].localeCompare(b[1])));
+  renderResults();
+}
+['rClass','rGame'].forEach(id=>el(id).onchange=renderResults);
+el('rName').oninput=renderResults;
+function renderResults(){
+  const c=el('rClass').value, g=el('rGame').value, q=el('rName').value.trim().toLowerCase();
+  shownRows = summaryRows.filter(r=>(!c||r.cls===c)&&(!g||r.slug===g)&&(!q||r.pib.toLowerCase().includes(q)));
+  el('rCount').textContent = shownRows.length+' з '+summaryRows.length;
+  el('resBody').innerHTML = shownRows.length
+    ? shownRows.map((r,i)=>`<tr class="rrow${r.k===openKey?' open':''}" data-i="${i}"><td>${esc(r.cls)}</td><td>${esc(r.pib)}</td><td>${esc(r.game)}</td>
+        <td>${r.score} / ${r.maxScore}</td><td><b>${r.grade}</b></td><td>${r.pct}%</td><td>${r.n} ${r.k===openKey?'▴':'▾'}</td></tr>`
+        + (r.k===openKey ? `<tr class="rdet"><td colspan="7">${attemptsHtml(r)}</td></tr>` : '')).join('')
+    : '<tr><td colspan="7" class="muted">Нічого не знайдено.</td></tr>';
+  el('resBody').querySelectorAll('tr.rrow').forEach(tr=>tr.onclick=()=>{
+    const r=shownRows[+tr.dataset.i]; openKey = openKey===r.k ? null : r.k; renderResults(); });
+}
+const plain = s => String(s||'').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
+// Правильна відповідь для помилки — з ключа гри (вкладка «Ключі»).
+function rightAnswer(slug, m){
+  const k = gameKeys.find(x=>x.slug===slug); if(!k) return '';
+  for(const r of k.data.rounds){
+    if(r.n!==m.r) continue;
+    for(const it of (r.items||[])){
+      if(r.type==='num' && plain(it.q)===m.q) return it.a + (it.u?' '+it.u:'');
+      if(r.type==='sort' && plain(it.n)===m.q) return '→ '+it.f;
+    }
+  }
+  return '';
+}
+function attemptsHtml(r){
+  return r.att.map(a=>{
+    const d=new Date(a.created_at);
+    const when=d.toLocaleDateString('uk-UA')+' '+d.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'});
+    const ms=a.details?.mistakes;
+    let body;
+    if(!ms) body='<div class="muted">Для цієї спроби список помилок не зберігався (спроба пройдена до 29.09.2026, до появи журналу).</div>';
+    else if(!ms.length) body='<div class="a">Без жодної помилки.</div>';
+    else body='<ul>'+ms.map(m=>{ const ra=rightAnswer(r.slug,m);
+      return `<li>Раунд ${m.r}: ${esc(m.q)} — <span class="v">${esc(m.v)}</span>${ra?` · правильно: <span class="a">${esc(ra)}</span>`:''}</li>`; }).join('')+'</ul>';
+    return `<div class="att"><b class="t">Спроба ${a.attempt_no||'?'}</b> · ${when} · очки ${a.score} / ${a.max_score} · бал <b>${a.grade}</b> (${a.pct}%)${ms?` · помилок: ${ms.length}`:''}${body}</div>`;
+  }).join('');
 }
 el('exportCsv').onclick = () => {
   const head = ['Клас','ПІБ','Гра','Очки в грі','Максимум','Бал','Відсоток','Спроб'];
-  const lines = [head.join(';')].concat(summaryRows.map(r=>[r.cls,r.pib,r.game,r.score,r.maxScore,r.grade,r.pct,r.n].join(';')));
-  const blob = new Blob(['﻿'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const lines = [head.join(';')].concat(shownRows.map(r=>[r.cls,r.pib,r.game,r.score,r.maxScore,r.grade,r.pct,r.n].join(';')));
+  const blob = new Blob(['\ufeff'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='rezultaty.csv'; a.click();
 };
 

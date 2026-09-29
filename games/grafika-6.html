@@ -46,6 +46,12 @@
   const $ = id => document.getElementById(id);
   const stage=$("stage"), say=$("say"), nextBtn=$("next"), starsEl=$("stars"), dotsEl=$("dots");
   let stars=0, round=0, mistakes=0;
+  // ⭐ Журнал помилок: де саме учень помилився. Іде в results.details,
+  //    вчитель бачить його в адмінці («Результати» → розгорнути рядок).
+  const MLOG=[];
+  const miss=(q,v)=>{ mistakes++; if(MLOG.length<300) MLOG.push({r:round+1,
+    q:String(q==null?"":q).replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim().slice(0,200),
+    v:String(v==null?"":v).replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim().slice(0,80)}); };
   const TOTAL_ROUNDS=5;
   const MAX=27; // 6 + 6 + 5 + 4 + 6
 
@@ -89,7 +95,7 @@
           if(left===0){ bit(cfg.win); done(); } else bit("Правильно! 👍 Далі?");
         } else {
           d.classList.add("nope"); setTimeout(()=>d.classList.remove("nope"),300);
-          mistakes++; bit(`Подумай ще: <b>${sel.n}</b> — точно сюди?`);
+          miss(sel.n, "→ "+d.querySelector(".fname").textContent); bit(`Подумай ще: <b>${sel.n}</b> — точно сюди?`);
         }
       };
       d.onclick=act; d.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();act();}};
@@ -118,7 +124,7 @@
         else { const bx=b.querySelector(".pbox"); b.classList.add("err");
           if(bx) bx.textContent="\u2715";
           setTimeout(()=>{ b.classList.remove("err"); if(bx) bx.textContent="\u2713"; },900);
-          mistakes++; bit(`Ні — <b>${it.n}</b>: ${it.s}.`); }
+          miss(it.n, "позначено хибну"); bit(`Ні — <b>${it.n}</b>: ${it.s}.`); }
       };
       pool.appendChild(b);
     });
@@ -144,7 +150,7 @@
           else bit(`Так! Крок ${step} правильний. Що далі?`);
         } else {
           b.classList.add("err"); setTimeout(()=>b.classList.remove("err"),400);
-          mistakes++; bit(`Ні, це не крок ${step+1}. Подумай, що робимо <b>раніше</b>.`);
+          miss(it.n, "обрано як крок "+(step+1)); bit(`Ні, це не крок ${step+1}. Подумай, що робимо <b>раніше</b>.`);
         }
       };
       pool.appendChild(b);
@@ -263,14 +269,14 @@
         <p style="opacity:.75;font-size:14px">Це <b>перша</b> частина роботи. Друга — твоє власне зображення на уроці.</p>
         ${canRetry ? '<button class="btn" id="again">Спробувати ще раз ↺</button>' : '<button class="btn ghost" id="home">Вийти ↩</button>'}
       </div>`;
-      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; starsEl.textContent=0;
+      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; MLOG.length=0; starsEl.textContent=0;
         document.querySelector(".card .actions").style.display="flex";
         nextBtn.textContent="Почати →"; nextBtn.disabled=false; paintDots();
         say.innerHTML="Ще спроба — покажи максимум! 🚀"; stage.innerHTML=""; };
       const home=$("home"); if(home) home.onclick=()=>{ location.href="../index.html"; };
     };
     if(window.submitResult){
-      window.submitResult(earned).then(res=>{
+      window.submitResult(earned, {mistakes:MLOG}).then(res=>{
         if(res && res.ok){
           finish(res.grade, (res.remaining!=null?res.remaining:0),
             (res.remaining>0 ? ("Залишилось спроб: "+res.remaining+" — можеш покращити.") : "Спроби використано. Зараховано найкращий результат."));

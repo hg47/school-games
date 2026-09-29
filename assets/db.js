@@ -61,10 +61,18 @@
   /* Запис результату гри. Був однаковим у всіх девʼяти іграх — тепер лежить
      в одному місці. Повертає те, що віддала sql-функція submit_result:
      { ok, grade, pct, attempt_no, remaining } або { ok:false, error }. */
-  window.submitResult = async function (score) {
+  window.submitResult = async function (score, details) {
     try {
       const play = JSON.parse(sessionStorage.getItem('play') || 'null');
       if (!play || !play.code) return { ok: false, error: 'no session' };
+      // ⭐ Журнал помилок (де саме помилився) — supabase/17_result_details.sql.
+      //    Якщо тієї функції в базі ще немає (HTTP 404), записуємо бал
+      //    старим способом: журнал — довідка, а бал губити не можна.
+      if (details) {
+        const r = await rpc('submit_result', { p_code: play.code, p_score: score, p_details: details });
+        if (!r.error) return r.data;
+        if (r.error.status !== 404) return { ok: false, error: r.error.message };
+      }
       const { data, error } = await rpc('submit_result', { p_code: play.code, p_score: score });
       if (error) return { ok: false, error: error.message };
       return data;
