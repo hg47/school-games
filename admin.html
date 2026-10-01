@@ -121,6 +121,10 @@
       </div>
       <div class="card">
         <div class="row between"><b>Список учнів</b><span class="muted" id="stCount"></span></div>
+        <div class="row" style="margin:10px 0 0">
+          <select id="stFilter" autocomplete="off"></select>
+          <input id="stSearch" placeholder="Пошук за прізвищем" style="width:220px" autocomplete="off">
+        </div>
         <table style="margin-top:8px"><thead><tr><th>Клас</th><th>ПІБ</th><th></th></tr></thead><tbody id="stBody"></tbody></table>
       </div>
     </div>
@@ -142,6 +146,11 @@
       </div>
       <div class="card">
         <div class="row between"><b>Наявні коди</b><span class="muted" id="codesCount"></span></div>
+        <div class="row" style="margin:10px 0 0">
+          <select id="cdClass" autocomplete="off"></select>
+          <select id="cdGame" autocomplete="off"></select>
+          <input id="cdSearch" placeholder="Пошук за прізвищем" style="width:220px" autocomplete="off">
+        </div>
         <table style="margin-top:8px"><thead><tr><th>Код</th><th>Клас</th><th>ПІБ</th><th>Гра</th><th>Спроб</th></tr></thead><tbody id="codesBody"></tbody></table>
       </div>
     </div>
@@ -233,10 +242,20 @@ el('cGame').onchange = updateGameDesc;
 async function loadStudents(){
   const { data, error } = await sb.from('students').select('id,full_name,class_label').order('class_label').order('full_name');
   if(error){ msg('stMsg', error.message, 'err'); return; }
-  students = data||[];
-  el('stCount').textContent = students.length+' учнів';
-  el('stBody').innerHTML = students.map(s=>`<tr><td>${esc(s.class_label)}</td><td>${esc(s.full_name)}</td>
-    <td style="text-align:right"><button class="btn danger sm" data-del="${s.id}">видалити</button></td></tr>`).join('');
+  students = (data||[]).sort((a,b)=>classCmp(a.class_label,b.class_label)||a.full_name.localeCompare(b.full_name,'uk'));
+  const fv = el('stFilter').value;
+  el('stFilter').innerHTML = '<option value="">Усі класи</option>' + classesList().map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if(classesList().includes(fv)) el('stFilter').value = fv;
+  renderStudents();
+  fillClassFilters();
+}
+function renderStudents(){
+  const c = el('stFilter').value, q = el('stSearch').value.trim().toLowerCase();
+  const shown = students.filter(s=>(!c||s.class_label===c)&&(!q||s.full_name.toLowerCase().includes(q)));
+  el('stCount').textContent = (c||q) ? shown.length+' з '+students.length+' учнів' : students.length+' учнів';
+  el('stBody').innerHTML = shown.length ? shown.map(s=>`<tr><td>${esc(s.class_label)}</td><td>${esc(s.full_name)}</td>
+    <td style="text-align:right"><button class="btn danger sm" data-del="${s.id}">видалити</button></td></tr>`).join('')
+    : '<tr><td colspan="3" class="muted">Нікого не знайдено</td></tr>';
   el('stBody').querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
     const id = b.dataset.del;
     const st = students.find(s=>s.id===id);
@@ -266,9 +285,12 @@ async function loadStudents(){
     //    інакше на екрані лишаються рядки вже видалених кодів
     await loadStudents(); await loadCodes(); await loadResults();
   });
-  fillClassFilters();
 }
-function classesList(){ return [...new Set(students.map(s=>s.class_label))].sort(); }
+el('stFilter').onchange = renderStudents;
+el('stSearch').oninput = renderStudents;
+// ⭐ класи за НОМЕРОМ: 5-А, 6-А … 10-А (рядкове сортування ставить 10-А перед 5-А)
+function classCmp(a,b){ return (parseInt(a,10)||0)-(parseInt(b,10)||0) || String(a).localeCompare(String(b),'uk'); }
+function classesList(){ return [...new Set(students.map(s=>s.class_label))].sort(classCmp); }
 function fillClassFilters(){
   const cls = classesList();
   el('cClass').innerHTML = cls.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('') || '<option value="">— немає учнів —</option>';
@@ -299,17 +321,33 @@ el('addStudents').onclick = async () => {
 };
 
 // ── коди ──
+let codesAll=[];
 async function loadCodes(){
   const { data, error } = await sb.from('codes')
     .select('code,max_attempts,students(full_name,class_label),games(title)')
     .order('created_at',{ascending:false});
   if(error){ el('codesBody').innerHTML=''; return; }
-  el('codesCount').textContent = (data?.length||0)+' кодів';
-  el('codesBody').innerHTML = (data||[]).map(c=>`<tr>
+  // ⭐ клас за номером, далі гра, далі ПІБ
+  codesAll = (data||[]).sort((a,b)=>classCmp(a.students?.class_label||'',b.students?.class_label||'')
+    ||(a.games?.title||'').localeCompare(b.games?.title||'','uk')
+    ||(a.students?.full_name||'').localeCompare(b.students?.full_name||'','uk'));
+  const keepSel=(id,all,list)=>{const v=el(id).value;el(id).innerHTML=`<option value="">${all}</option>`+list.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');if(list.includes(v))el(id).value=v;};
+  keepSel('cdClass','Усі класи',[...new Set(codesAll.map(c=>c.students?.class_label).filter(Boolean))].sort(classCmp));
+  keepSel('cdGame','Усі ігри',[...new Set(codesAll.map(c=>c.games?.title).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'uk')));
+  renderCodes();
+}
+function renderCodes(){
+  const c=el('cdClass').value, g=el('cdGame').value, q=el('cdSearch').value.trim().toLowerCase();
+  const shown=codesAll.filter(x=>(!c||x.students?.class_label===c)&&(!g||x.games?.title===g)&&(!q||(x.students?.full_name||'').toLowerCase().includes(q)));
+  el('codesCount').textContent = (c||g||q) ? shown.length+' з '+codesAll.length+' кодів' : codesAll.length+' кодів';
+  el('codesBody').innerHTML = shown.length ? shown.map(c=>`<tr>
     <td><span class="code">${esc(c.code)}</span></td>
     <td>${esc(c.students?.class_label)}</td><td>${esc(c.students?.full_name)}</td>
-    <td>${esc(c.games?.title)}</td><td>${c.max_attempts}</td></tr>`).join('');
+    <td>${esc(c.games?.title)}</td><td>${c.max_attempts}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="muted">Нічого не знайдено</td></tr>';
 }
+['cdClass','cdGame'].forEach(id=>el(id).onchange=renderCodes);
+el('cdSearch').oninput=renderCodes;
 el('genCodes').onclick = async () => {
   const gameSlug = el('cGame').value;
   const ids = [...el('cChecks').querySelectorAll('.stChk:checked')].map(ch=>ch.value);
@@ -405,7 +443,7 @@ async function loadResults(){
   });
   summaryRows = Object.values(map).sort((a,b)=>(a.cls+a.game+a.pib).localeCompare(b.cls+b.game+b.pib));
   const keep = (id, all, list) => { const v=el(id).value; el(id).innerHTML = `<option value="">${all}</option>` + list.map(x=>`<option value="${esc(x[0])}">${esc(x[1])}</option>`).join(''); if(list.some(x=>x[0]===v)) el(id).value=v; };
-  keep('rClass','Усі класи',[...new Set(summaryRows.map(r=>r.cls).filter(Boolean))].sort().map(c=>[c,c]));
+  keep('rClass','Усі класи',[...new Set(summaryRows.map(r=>r.cls).filter(Boolean))].sort(classCmp).map(c=>[c,c]));
   keep('rGame','Усі ігри',[...new Map(summaryRows.map(r=>[r.slug,r.game])).entries()].sort((a,b)=>a[1].localeCompare(b[1])));
   renderResults();
 }
