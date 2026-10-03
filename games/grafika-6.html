@@ -256,7 +256,7 @@
     const earned = Math.max(0, MAX - mistakes);
     const localGrade = Math.max(1, Math.round(1+11*earned/MAX));
     say.innerHTML="Зберігаю твій результат… ⏳";
-    stage.innerHTML='<div class="win"><div class="big">⏳</div><h2>Рахуємо оцінку…</h2></div>';
+    stage.innerHTML='<div class="win"><div class="big">⏳</div><h2>Підраховуємо оцінку…</h2></div>';
     const finish = (grade, remaining, note) => {
       const canRetry = remaining > 0;
       say.innerHTML="Ти пройшов гру підсумкової роботи ГР 3! 🎉";
