@@ -110,7 +110,7 @@
         const used = /вичерпано/i.test(d.error || '');
         if (used) this.clear(code);
         return { ok: false, stop: used,
-          msg: used ? 'Усі спроби вже використано. Якщо стався технічний збій — скажи вчителю.'
+          msg: used ? 'Усі спроби вже використано. Якщо стався технічний збій — скажи вчительці або вчителю.'
                     : (d.error || 'Не вдалося почати гру.') };
       }
       if (d.resumed && s && s.started) return { ok: true, state: s };
