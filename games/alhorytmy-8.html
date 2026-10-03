@@ -55,9 +55,10 @@
   // ⭐ Журнал помилок: де саме учень помилився. Іде в results.details,
   //    вчитель бачить його в адмінці («Результати» → розгорнути рядок).
   const MLOG=[];
-  const miss=(q,v)=>{ mistakes++; if(MLOG.length<300) MLOG.push({r:round+1,
+  const miss0=(q,v)=>{ mistakes++; if(MLOG.length<300) MLOG.push({r:round+1,
     q:String(q==null?"":q).replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim().slice(0,200),
     v:String(v==null?"":v).replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim().slice(0,80)}); };
+  const miss=(q,v)=>{ miss0(q,v); if(window.Attempt) Attempt.save(PLAY.code,{mistakes:mistakes,mlog:MLOG}); };
   const TOTAL_ROUNDS=5;
   const MAX=26; // 6 + 6 + 4 + 6 + 4
 
@@ -308,6 +309,7 @@
   function finale(){
     dotsEl.querySelectorAll("i").forEach(d=>d.className="done");
     document.querySelector(".card .actions").style.display="none";
+    if(window.Attempt) mistakes=Math.max(mistakes, Attempt.mistakes(PLAY.code));
     const earned = Math.max(0, MAX - mistakes);
     const localGrade = Math.max(1, Math.round(1+11*earned/MAX));
     say.innerHTML="Зберігаю твій результат… ⏳";
@@ -352,15 +354,23 @@
   function lockNext(){ nextBtn.disabled=true; nextBtn.textContent="Виконуй завдання…"; }
   function done(){ nextBtn.disabled=false; nextBtn.textContent = round<TOTAL_ROUNDS-1 ? "Далі →" : "Фінал \u{1F3C1}"; }
 
-  nextBtn.onclick=()=>{
+  nextBtn.onclick=async()=>{
+    // ⭐ Спроба починається на старті (assets/db.js, supabase/18_attempt_start.sql)
+    if(window.Attempt && nextBtn.textContent.startsWith("Почати")){
+      nextBtn.disabled=true; const a=await Attempt.begin(PLAY); nextBtn.disabled=false;
+      if(!a.ok){ say.innerHTML=a.msg; if(a.stop){ nextBtn.textContent="Вийти ↩"; nextBtn.onclick=()=>{ location.href="../index.html"; }; } return; }
+      if(a.state){ round=a.state.round||0; mistakes=a.state.mistakes||0; stars=a.state.stars||0; starsEl.textContent=stars;
+        MLOG.length=0; (a.state.mlog||[]).forEach(x=>MLOG.push(x)); paintDots(); rounds[round](); return; }
+    }
     if(round>=TOTAL_ROUNDS){ return; }
     if(nextBtn.textContent.startsWith("Почати") || nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")){
       if(nextBtn.textContent.startsWith("Далі") || nextBtn.textContent.startsWith("Фінал")) round++;
       if(round>=TOTAL_ROUNDS){ finale(); return; }
-      paintDots(); rounds[round]();
+      paintDots(); if(window.Attempt) Attempt.save(PLAY.code,{round:round,stars:stars,mistakes:mistakes,mlog:MLOG}); rounds[round]();
     }
   };
   paintDots();
+  if(window.Attempt && Attempt.saved(PLAY.code)) say.innerHTML="Ти вже почав цю спробу на цьому пристрої. Натисни <b>«Почати»</b> — гра продовжиться з того самого раунду, а помилки, які вже були, збережено.";
 })();
 </script>
 </body>

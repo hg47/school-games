@@ -343,8 +343,17 @@ function renderCodes(){
   el('codesBody').innerHTML = shown.length ? shown.map(c=>`<tr>
     <td><span class="code">${esc(c.code)}</span></td>
     <td>${esc(c.students?.class_label)}</td><td>${esc(c.students?.full_name)}</td>
-    <td>${esc(c.games?.title)}</td><td>${c.max_attempts}</td></tr>`).join('')
+    <td>${esc(c.games?.title)}</td><td>${c.max_attempts} <button class="btn ghost sm addAtt" data-code="${esc(c.code)}" title="Дати ще одну спробу">+1</button></td></tr>`).join('')
     : '<tr><td colspan="5" class="muted">Нічого не знайдено</td></tr>';
+  el('codesBody').querySelectorAll('.addAtt').forEach(b=>b.onclick=()=>addAttempt(b.dataset.code));
+}
+// ⭐ «+1 спроба» — для учня, у якого спробу зірвав технічний збій (18_attempt_start.sql)
+async function addAttempt(code){
+  if(!confirm('Дати ще одну спробу за кодом '+code+'?')) return;
+  const { data, error } = await sb.rpc('admin_add_attempt', { p_code: code });
+  if(error){ alert(/admin_add_attempt|404|schema cache/i.test(error.message) ? 'Спершу виконайте в Supabase файл supabase/18_attempt_start.sql.' : error.message); return; }
+  alert('Готово: тепер спроб — '+data+'.');
+  await loadCodes(); await loadResults();
 }
 ['cdClass','cdGame'].forEach(id=>el(id).onchange=renderCodes);
 el('cdSearch').oninput=renderCodes;
@@ -429,7 +438,7 @@ function renderKey(){
 let resAll=[], summaryRows=[], shownRows=[], openKey=null;
 async function loadResults(){
   const { data, error } = await sb.from('results')
-    .select('id,grade,pct,score,max_score,attempt_no,created_at,details,students(full_name,class_label),games(slug,title)')
+    .select('id,grade,pct,score,max_score,attempt_no,created_at,details,status,codes(code),students(full_name,class_label),games(slug,title)')
     .order('created_at',{ascending:true});
   if(error){ msg('resMsg', error.message, 'err'); return; }
   resAll = data||[];
@@ -437,9 +446,11 @@ async function loadResults(){
   resAll.forEach(r=>{
     const cls=r.students?.class_label||'', pib=r.students?.full_name||'(учня видалено)', game=r.games?.title||'', slug=r.games?.slug||'';
     const k=cls+'|'+pib+'|'+slug;
-    if(!map[k]) map[k]={k,cls,pib,game,slug,grade:r.grade||0,pct:r.pct||0,score:r.score||0,maxScore:r.max_score||0,n:0,att:[]};
-    const m=map[k]; m.n++; m.att.push(r);
-    if((r.grade||0)>m.grade || m.n===1){ m.grade=r.grade||0; m.pct=r.pct||0; m.score=r.score||0; m.maxScore=r.max_score||0; }
+    // ⭐ Бал — лише з ЗАВЕРШЕНИХ спроб (18_attempt_start.sql): розпочата чи перервана спроба бала не має
+    if(!map[k]) map[k]={k,cls,pib,game,slug,code:r.codes?.code||'',grade:null,pct:null,score:null,maxScore:r.max_score||0,n:0,att:[]};
+    const m=map[k]; m.n++; m.att.push(r); if(r.codes?.code) m.code=r.codes.code;
+    const fin = !r.status || r.status==='done';
+    if(fin && (m.grade===null || (r.grade||0)>m.grade)){ m.grade=r.grade||0; m.pct=r.pct||0; m.score=r.score||0; m.maxScore=r.max_score||0; }
   });
   summaryRows = Object.values(map).sort((a,b)=>(a.cls+a.game+a.pib).localeCompare(b.cls+b.game+b.pib));
   const keep = (id, all, list) => { const v=el(id).value; el(id).innerHTML = `<option value="">${all}</option>` + list.map(x=>`<option value="${esc(x[0])}">${esc(x[1])}</option>`).join(''); if(list.some(x=>x[0]===v)) el(id).value=v; };
@@ -455,11 +466,12 @@ function renderResults(){
   el('rCount').textContent = shownRows.length+' з '+summaryRows.length;
   el('resBody').innerHTML = shownRows.length
     ? shownRows.map((r,i)=>`<tr class="rrow${r.k===openKey?' open':''}" data-i="${i}"><td>${esc(r.cls)}</td><td>${esc(r.pib)}</td><td>${esc(r.game)}</td>
-        <td>${r.score} / ${r.maxScore}</td><td><b>${r.grade}</b></td><td>${r.pct}%</td><td>${r.n} ${r.k===openKey?'▴':'▾'}</td></tr>`
+        ${r.grade===null ? `<td colspan="3" class="muted">не завершено</td>` : `<td>${r.score} / ${r.maxScore}</td><td><b>${r.grade}</b></td><td>${r.pct}%</td>`}<td>${r.n} ${r.k===openKey?'▴':'▾'}</td></tr>`
         + (r.k===openKey ? `<tr class="rdet"><td colspan="7">${attemptsHtml(r)}</td></tr>` : '')).join('')
     : '<tr><td colspan="7" class="muted">Нічого не знайдено.</td></tr>';
   el('resBody').querySelectorAll('tr.rrow').forEach(tr=>tr.onclick=()=>{
     const r=shownRows[+tr.dataset.i]; openKey = openKey===r.k ? null : r.k; renderResults(); });
+  el('resBody').querySelectorAll('.addAtt').forEach(b=>b.onclick=e=>{ e.stopPropagation(); addAttempt(b.dataset.code); });
 }
 const plain = s => String(s||'').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
 // Правильна відповідь для помилки — з ключа гри (вкладка «Ключі»).
@@ -477,7 +489,12 @@ function rightAnswer(slug, m){
   return '';
 }
 function attemptsHtml(r){
+  const add = r.code ? `<div class="att"><button class="btn ghost sm addAtt" data-code="${esc(r.code)}">+1 спроба для цього учня</button>
+    <span class="muted"> — якщо спробу зірвав технічний збій (зник інтернет, сів телефон).</span></div>` : '';
   return r.att.map(a=>{
+    const d0=new Date(a.created_at), w0=d0.toLocaleDateString('uk-UA')+' '+d0.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'});
+    if(a.status==='started') return `<div class="att"><b class="t">Спроба ${a.attempt_no||'?'}</b> · ${w0} · <b>розпочата, не завершена</b><div class="muted">Учень почав гру і ще не дійшов до кінця (або закрив сторінку). Бала немає; на тому самому пристрої гра продовжиться з того самого раунду.</div></div>`;
+    if(a.status==='abandoned') return `<div class="att"><b class="t">Спроба ${a.attempt_no||'?'}</b> · ${w0} · <b>перервана</b><div class="muted">Гру з цим кодом відкрили на іншому пристрої чи в іншому браузері — ця спроба закрита без бала.</div></div>`;
     const d=new Date(a.created_at);
     const when=d.toLocaleDateString('uk-UA')+' '+d.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'});
     const ms=a.details?.mistakes;
@@ -487,11 +504,11 @@ function attemptsHtml(r){
     else body='<ul>'+ms.map(m=>{ const ra=rightAnswer(r.slug,m);
       return `<li>Раунд ${m.r}: ${esc(m.q)} — <span class="v">${esc(m.v)}</span>${ra?` · правильно: <span class="a">${esc(ra)}</span>`:''}</li>`; }).join('')+'</ul>';
     return `<div class="att"><b class="t">Спроба ${a.attempt_no||'?'}</b> · ${when} · очки ${a.score} / ${a.max_score} · бал <b>${a.grade}</b> (${a.pct}%)${ms?` · помилок: ${ms.length}`:''}${body}</div>`;
-  }).join('');
+  }).join('') + add;
 }
 el('exportCsv').onclick = () => {
   const head = ['Клас','ПІБ','Гра','Очки в грі','Максимум','Бал','Відсоток','Спроб'];
-  const lines = [head.join(';')].concat(shownRows.map(r=>[r.cls,r.pib,r.game,r.score,r.maxScore,r.grade,r.pct,r.n].join(';')));
+  const lines = [head.join(';')].concat(shownRows.map(r=>[r.cls,r.pib,r.game,r.score??'',r.maxScore,r.grade??'не завершено',r.pct??'',r.n].join(';')));
   const blob = new Blob(['\ufeff'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='rezultaty.csv'; a.click();
 };
