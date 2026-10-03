@@ -68,6 +68,14 @@
   .msg.err{display:block; background:var(--bad-soft); color:var(--bad); border:1px solid var(--bad-line)}
   .msg.ok{display:block; background:var(--ok-soft); color:var(--ok); border:1px solid var(--ok-line)}
 
+  /* кнопка «скопіювати код» поруч із кодом */
+  .copybtn{display:inline-grid; place-items:center; width:28px; height:28px; margin-left:6px; vertical-align:middle;
+    border-radius:var(--r-sm); border:1px solid var(--line-2); background:var(--surface); color:var(--ink-2);
+    cursor:pointer; padding:0; transition:background .15s, color .15s, border-color .15s}
+  .copybtn:hover{background:var(--surface-2); color:var(--ink); border-color:var(--brand)}
+  .copybtn:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+  .copybtn.done{color:var(--ok); border-color:var(--ok)}
+  .copybtn svg{width:15px; height:15px}
   .code{font-family:var(--mono); font-weight:700; letter-spacing:1px; color:var(--accent);
     background:var(--accent-soft); border:1px solid color-mix(in srgb,var(--accent) 24%,transparent);
     padding:2px 8px; border-radius:6px}
@@ -151,7 +159,7 @@
           <select id="cdGame" autocomplete="off"></select>
           <input id="cdSearch" placeholder="Пошук за прізвищем" style="width:220px" autocomplete="off">
         </div>
-        <table style="margin-top:8px"><thead><tr><th>Код</th><th>Клас</th><th>ПІБ</th><th>Гра</th><th>Спроб</th></tr></thead><tbody id="codesBody"></tbody></table>
+        <div style="overflow-x:auto"><table style="margin-top:8px"><thead><tr><th>Код</th><th>Клас</th><th>ПІБ</th><th>Гра</th><th>Спроб</th></tr></thead><tbody id="codesBody"></tbody></table></div>
       </div>
     </div>
 
@@ -341,12 +349,28 @@ function renderCodes(){
   const shown=codesAll.filter(x=>(!c||x.students?.class_label===c)&&(!g||x.games?.title===g)&&(!q||(x.students?.full_name||'').toLowerCase().includes(q)));
   el('codesCount').textContent = (c||g||q) ? shown.length+' з '+codesAll.length+' кодів' : codesAll.length+' кодів';
   el('codesBody').innerHTML = shown.length ? shown.map(c=>`<tr>
-    <td><span class="code">${esc(c.code)}</span></td>
+    <td style="white-space:nowrap"><span class="code">${esc(c.code)}</span>${copyBtn(c.code)}</td>
     <td>${esc(c.students?.class_label)}</td><td>${esc(c.students?.full_name)}</td>
     <td>${esc(c.games?.title)}</td><td>${c.max_attempts} <button class="btn ghost sm addAtt" data-code="${esc(c.code)}" title="Дати ще одну спробу">+1</button></td></tr>`).join('')
     : '<tr><td colspan="5" class="muted">Нічого не знайдено</td></tr>';
   el('codesBody').querySelectorAll('.addAtt').forEach(b=>b.onclick=()=>addAttempt(b.dataset.code));
 }
+// ⭐ кнопка «скопіювати код» (03.10.2026) — один обробник на всю сторінку
+const COPY_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+const OK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+function copyBtn(code){ return `<button type="button" class="copybtn" data-copy="${esc(code)}" title="Скопіювати код" aria-label="Скопіювати код ${esc(code)}">${COPY_ICON}</button>`; }
+async function copyText(s){
+  try{ await navigator.clipboard.writeText(s); return true; }catch(e){}
+  try{ const ta=document.createElement('textarea'); ta.value=s; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); const ok=document.execCommand('copy'); ta.remove(); return ok; }catch(e){ return false; }
+}
+document.addEventListener('click', async e=>{
+  const b=e.target.closest('.copybtn'); if(!b) return;
+  e.stopPropagation();
+  const ok=await copyText(b.dataset.copy||'');
+  b.innerHTML = ok ? OK_ICON : '!'; b.classList.toggle('done', ok); b.title = ok ? 'Скопійовано' : 'Не вдалося скопіювати';
+  clearTimeout(b._t); b._t=setTimeout(()=>{ b.innerHTML=COPY_ICON; b.classList.remove('done'); b.title='Скопіювати код'; },1400);
+});
 // ⭐ «+1 спроба» — для учня, у якого спробу зірвав технічний збій (18_attempt_start.sql)
 async function addAttempt(code){
   if(!confirm('Дати ще одну спробу за кодом '+code+'?')) return;
@@ -367,7 +391,7 @@ el('genCodes').onclick = async () => {
   if(error){ msg('cMsg', error.message, 'err'); return; }
   msg('cMsg', `Згенеровано кодів: ${data.length}`, 'ok');
   el('genResult').innerHTML = '<table style="margin-top:10px"><thead><tr><th>ПІБ</th><th>Код</th></tr></thead><tbody>'+
-    data.map(r=>`<tr><td>${esc(r.r_name)}</td><td><span class="code">${esc(r.r_code)}</span></td></tr>`).join('')+'</tbody></table>';
+    data.map(r=>`<tr><td>${esc(r.r_name)}</td><td style="white-space:nowrap"><span class="code">${esc(r.r_code)}</span>${copyBtn(r.r_code)}</td></tr>`).join('')+'</tbody></table>';
   await loadCodes();
 };
 
