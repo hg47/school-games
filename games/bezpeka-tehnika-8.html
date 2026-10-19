@@ -58,7 +58,23 @@
   const miss0=(q,v)=>{ mistakes++; if(MLOG.length<300) MLOG.push({r:round+1,
     q:String(q==null?"":q).replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim().slice(0,200),
     v:String(v==null?"":v).replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim().slice(0,80)}); };
-  const miss=(q,v)=>{ miss0(q,v); if(window.Attempt) Attempt.save(PLAY.code,{mistakes:mistakes,mlog:MLOG}); };
+  const miss=(q,v)=>{ miss0(q,v); tAct(false); if(window.Attempt) Attempt.save(PLAY.code,{mistakes:mistakes,mlog:MLOG}); };
+
+  // ⭐ Журнал ЧАСУ (19.10.2026): скільки секунд пішло на кожен раунд і кожну відповідь,
+  //    і чи виходив учень зі сторінки. Учень цього не бачить; учитель бачить в адмінці.
+  //    Зберігається в localStorage, щоб оновлення сторінки не стирало вже пройдені раунди.
+  const TKEY='tm:'+String(PLAY.code||'').toUpperCase();
+  let TIM; try{ TIM=JSON.parse(localStorage.getItem(TKEY)||'null'); }catch(e){ TIM=null; }
+  if(!TIM || typeof TIM!=='object' || !TIM.r) TIM={r:{}};
+  let tCur=null, tHidAt=0;
+  const tSave=()=>{ try{ localStorage.setItem(TKEY, JSON.stringify(TIM)); }catch(e){} };
+  const tNow=()=>(typeof performance!=='undefined'?performance.now():Date.now());
+  const tStart=i=>{ const prev=TIM.r[i+1]; tCur={t0:tNow(), acts:[], hid:0, hidSec:0, re:(prev?(prev.re||0)+1:0)}; };
+  const tAct=ok=>{ if(!tCur) return; if(tCur.acts.length<60) tCur.acts.push([Math.round((tNow()-tCur.t0)/100)/10, ok?1:0]); };
+  const tEnd=()=>{ if(!tCur) return; const sec=Math.round((tNow()-tCur.t0)/100)/10;
+    TIM.r[round+1]={sec:sec, acts:tCur.acts, hid:tCur.hid, hidSec:Math.round(tCur.hidSec), re:tCur.re}; tCur=null; tSave(); };
+  document.addEventListener('visibilitychange',()=>{ if(!tCur) return;
+    if(document.hidden){ tCur.hid++; tHidAt=tNow(); } else if(tHidAt){ tCur.hidSec+=(tNow()-tHidAt)/1000; tHidAt=0; } });
   const TOTAL_ROUNDS=5;
   const MAX=24; // 4 + 6 + 4 + 6 + 4
 
@@ -66,7 +82,7 @@
   const paintDots=()=>{[...dotsEl.children].forEach((d,i)=>{d.className = i<round?"done":(i===round?"on":"");});};
 
   const addStar = (n=1) => {
-    stars+=n; starsEl.textContent=stars;
+    stars+=n; starsEl.textContent=stars; tAct(true);
     const f=$("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
   };
   const bit = html => { say.innerHTML=html; };
@@ -269,15 +285,16 @@
         <p style="opacity:.75;font-size:14px">Цей бал іде у свідоцтво досягнень за <b>ГР 4 \u2014 безпека й етика</b>.</p>
         ${canRetry ? '<button class="btn" id="again">Спробувати ще раз \u21ba</button>' : '<button class="btn ghost" id="home">Вийти \u21a9</button>'}
       </div>`;
-      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; MLOG.length=0; starsEl.textContent=0;
+      const again=$("again"); if(again) again.onclick=()=>{ stars=0; round=0; mistakes=0; MLOG.length=0; starsEl.textContent=0; TIM={r:{}}; tSave();
         document.querySelector(".card .actions").style.display="flex";
         nextBtn.textContent="Почати \u2192"; nextBtn.disabled=false; paintDots();
         say.innerHTML="Ще спроба \u2014 цього разу читай уважніше \u{1F680}"; stage.innerHTML=""; };
       const home=$("home"); if(home) home.onclick=()=>{ location.href="../index.html"; };
     };
     if(window.submitResult){
-      window.submitResult(earned, {mistakes:MLOG}).then(res=>{
-        if(res && res.ok){
+      const timing=Object.keys(TIM.r).sort((a,b)=>a-b).map(k=>Object.assign({n:+k}, TIM.r[k]));
+      window.submitResult(earned, {mistakes:MLOG, timing:timing}).then(res=>{
+        if(res && res.ok){ try{ localStorage.removeItem(TKEY); }catch(e){} TIM={r:{}};
           finish(res.grade, (res.remaining!=null?res.remaining:0),
             (res.remaining>0 ? ("Залишилось спроб: "+res.remaining+" \u2014 можеш покращити.") : "Спроби використано. Зараховано найкращий результат."));
         } else if(res && res.error && /вичерпано/i.test(res.error)){
@@ -292,9 +309,9 @@
   }
 
   // ═══════════════ Керування раундами ═══════════════
-  const rounds=[round1,round2,round3,round4,round5];
+  const rounds=[round1,round2,round3,round4,round5].map((f,i)=>()=>{ tStart(i); f(); });
   function lockNext(){ nextBtn.disabled=true; nextBtn.textContent="Виконуй завдання\u2026"; }
-  function done(){ nextBtn.disabled=false; nextBtn.textContent = round<TOTAL_ROUNDS-1 ? "Далі \u2192" : "Фінал \u{1F3C1}"; }
+  function done(){ tEnd(); nextBtn.disabled=false; nextBtn.textContent = round<TOTAL_ROUNDS-1 ? "Далі \u2192" : "Фінал \u{1F3C1}"; }
 
   nextBtn.onclick=async()=>{
     // ⭐ Спроба починається на старті (assets/db.js, supabase/18_attempt_start.sql)

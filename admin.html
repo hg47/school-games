@@ -54,6 +54,8 @@
   .att{margin-top:10px} .att b.t{font-size:var(--fs-md)}
   .att ul{margin:4px 0 0; padding-left:20px} .att li{margin:3px 0}
   .att .v{color:var(--bad); font-weight:700} .att .a{color:var(--ok); font-weight:700}
+  .tm{border-collapse:collapse; margin:6px 0 2px; font-size:var(--fs-sm)} .tm th,.tm td{padding:3px 10px; border-bottom:1px solid var(--line); text-align:left}
+  .tm tr.fast td{background:rgba(214,69,69,.10)} .flag{color:var(--bad); font-weight:700}
   .kround{margin-top:var(--s4)}
   .kround h3{margin:0 0 4px; font-size:var(--fs-md)}
   .kq{border-top:1px solid var(--line); padding:10px 0}
@@ -514,7 +516,7 @@ function renderResults(){
   el('rCount').textContent = shownRows.length+' з '+summaryRows.length;
   el('resBody').innerHTML = shownRows.length
     ? shownRows.map((r,i)=>`<tr class="rrow${r.k===openKey?' open':''}" data-i="${i}"><td>${esc(r.cls)}</td><td>${esc(r.pib)}</td><td>${esc(r.game)}</td>
-        ${r.grade===null ? `<td colspan="3" class="muted">не завершено</td>` : `<td>${r.score} / ${r.maxScore}</td><td><b>${r.grade}</b></td><td>${r.pct}%</td>`}<td>${r.n} ${r.k===openKey?'▴':'▾'}</td></tr>`
+        ${r.grade===null ? `<td colspan="3" class="muted">не завершено</td>` : `<td>${r.score} / ${r.maxScore}</td><td><b>${r.grade}</b></td><td>${r.pct}%</td>`}<td>${r.n} ${r.att.some(a=>{const t=timingInfo(a,r.slug); return t&&(t.flagged||t.hidAll);})?'<span class="flag" title="Є підозріло швидкі раунди або виходи зі сторінки — розгорніть рядок">⚠</span> ':''}${r.k===openKey?'▴':'▾'}</td></tr>`
         + (r.k===openKey ? `<tr class="rdet"><td colspan="7">${attemptsHtml(r)}</td></tr>` : '')).join('')
     : '<tr><td colspan="7" class="muted">Нічого не знайдено.</td></tr>';
   el('resBody').querySelectorAll('tr.rrow').forEach(tr=>tr.onclick=()=>{
@@ -536,6 +538,31 @@ function rightAnswer(slug, m){
   }
   return '';
 }
+// ⭐ Час відповідей (19.10.2026): гра пише details.timing = [{n, sec, acts:[[сек, ok]], hid, hidSec, re}]
+//    Медіана раунду рахується по всіх завершених спробах цієї гри — так видно, хто «підозріло швидкий».
+const median = a => { if(!a.length) return null; const b=[...a].sort((x,y)=>x-y), m=b.length>>1; return b.length%2?b[m]:(b[m-1]+b[m])/2; };
+function roundMedians(slug){
+  const by={};
+  resAll.forEach(x=>{ if(x.games?.slug!==slug || !(x.status==='done'||!x.status)) return;
+    (x.details?.timing||[]).forEach(t=>{ (by[t.n]=by[t.n]||[]).push(t.sec); }); });
+  const out={}; Object.keys(by).forEach(k=>{ if(by[k].length>=3) out[k]=median(by[k]); }); return out;
+}
+function timingInfo(a, slug){
+  const tm=a.details?.timing; if(!tm||!tm.length) return null;
+  const med=roundMedians(slug); let flagged=0, hidAll=0;
+  const rows=tm.map(t=>{
+    const acts=t.acts||[], first=acts.length?acts[0][0]:null;
+    const rest=acts.length>1 ? (acts[acts.length-1][0]-acts[0][0])/(acts.length-1) : null;
+    const m=med[t.n], fast = m!=null && t.sec < m*0.5;
+    if(fast) flagged++; hidAll+=t.hid||0;
+    const hid = t.hid ? `<span class="flag">${t.hid}× · ${t.hidSec||0} с</span>` : '—';
+    return `<tr class="${fast?'fast':''}"><td>${t.n}</td><td>${t.sec} с${fast?' <span class="flag">· швидко</span>':''}</td><td>${m!=null?Math.round(m)+' с':'—'}</td>`+
+      `<td>${first!=null?first+' с':'—'}</td><td>${rest!=null?(Math.round(rest*10)/10)+' с':'—'}</td><td>${hid}</td>${t.re?`<td class="muted">раунд починали заново: ${t.re}</td>`:'<td></td>'}</tr>`;
+  }).join('');
+  const html = `<table class="tm"><thead><tr><th>Раунд</th><th>Час</th><th>Медіана класу</th><th>Перша відповідь</th><th>Далі в середньому</th><th>Виходив зі сторінки</th><th></th></tr></thead><tbody>${rows}</tbody></table>`+
+    `<div class="muted">«Швидко» — раунд пройдено вдвічі швидше за медіану інших учнів у цій грі. Це не доказ, а привід поставити учневі 1–2 запитання «чому?». Довга «перша відповідь» і далі дуже швидкі — типовий слід «сфотографував і чекав підказки».</div>`;
+  return {html, flagged, hidAll};
+}
 function attemptsHtml(r){
   const add = r.code ? `<div class="att"><button class="btn ghost sm addAtt" data-code="${esc(r.code)}">+1 спроба для цього учня</button>
     <span class="muted"> — якщо спробу зірвав технічний збій (зник інтернет, сів телефон).</span></div>` : '';
@@ -551,7 +578,9 @@ function attemptsHtml(r){
     else if(!ms.length) body='<div class="a">Без жодної помилки.</div>';
     else body='<ul>'+ms.map(m=>{ const ra=rightAnswer(r.slug,m);
       return `<li>Раунд ${m.r}: ${esc(m.q)} — <span class="v">${esc(m.v)}</span>${ra?` · правильно: <span class="a">${esc(ra)}</span>`:''}</li>`; }).join('')+'</ul>';
-    return `<div class="att"><b class="t">Спроба ${a.attempt_no||'?'}</b> · ${when} · очки ${a.score} / ${a.max_score} · бал <b>${a.grade}</b> (${a.pct}%)${ms?` · помилок: ${ms.length}`:''}${body}</div>`;
+    const ti=timingInfo(a, r.slug);
+    const tBlock = ti ? `<div style="margin-top:6px"><b>Час відповідей</b>${ti.flagged?` <span class="flag">· підозріло швидких раундів: ${ti.flagged}</span>`:''}${ti.hidAll?` <span class="flag">· виходив зі сторінки: ${ti.hidAll}×</span>`:''}${ti.html}</div>` : '';
+    return `<div class="att"><b class="t">Спроба ${a.attempt_no||'?'}</b> · ${when} · очки ${a.score} / ${a.max_score} · бал <b>${a.grade}</b> (${a.pct}%)${ms?` · помилок: ${ms.length}`:''}${body}${tBlock}</div>`;
   }).join('') + add;
 }
 el('exportCsv').onclick = () => {
