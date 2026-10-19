@@ -144,7 +144,7 @@
         <div class="row" style="margin:10px 0">
           <select id="cGame"></select>
           <select id="cClass"></select>
-          <label class="row" style="gap:6px">Спроб: <input id="cAttempts" type="number" min="1" max="5" value="2" style="width:64px"></label>
+          <label class="row" style="gap:6px">Спроб: <input id="cAttempts" type="number" min="1" max="10" value="1" style="width:64px"></label>
           <button class="btn" id="genCodes">Згенерувати для обраних</button>
         </div>
         <div id="cGameDesc" class="muted" style="margin:-4px 0 10px"></div>
@@ -158,6 +158,8 @@
           <select id="cdClass" autocomplete="off"></select>
           <select id="cdGame" autocomplete="off"></select>
           <input id="cdSearch" placeholder="Пошук за прізвищем" style="width:220px" autocomplete="off">
+          <label class="row" style="gap:6px">Спроб для показаних: <input id="cdSetN" type="number" min="1" max="10" value="1" style="width:64px"></label>
+          <button class="btn ghost sm" id="cdSetAll" title="Встановити це число спроб усім кодам, які зараз видно в таблиці">Встановити</button>
         </div>
         <div style="overflow-x:auto"><table style="margin-top:8px"><thead><tr><th>Код</th><th>Клас</th><th>ПІБ</th><th>Гра</th><th>Спроб</th></tr></thead><tbody id="codesBody"></tbody></table></div>
       </div>
@@ -351,10 +353,32 @@ function renderCodes(){
   el('codesBody').innerHTML = shown.length ? shown.map(c=>`<tr>
     <td style="white-space:nowrap"><span class="code">${esc(c.code)}</span>${copyBtn(c.code)}</td>
     <td>${esc(c.students?.class_label)}</td><td>${esc(c.students?.full_name)}</td>
-    <td>${esc(c.games?.title)}</td><td>${c.max_attempts} <button class="btn ghost sm addAtt" data-code="${esc(c.code)}" title="Дати ще одну спробу">+1</button></td></tr>`).join('')
+    <td>${esc(c.games?.title)}</td><td style="white-space:nowrap"><button class="btn ghost sm decAtt" data-code="${esc(c.code)}" data-n="${c.max_attempts}" title="Забрати одну спробу"${c.max_attempts<=1?' disabled':''}>−1</button> ${c.max_attempts} <button class="btn ghost sm addAtt" data-code="${esc(c.code)}" title="Дати ще одну спробу">+1</button></td></tr>`).join('')
     : '<tr><td colspan="5" class="muted">Нічого не знайдено</td></tr>';
   el('codesBody').querySelectorAll('.addAtt').forEach(b=>b.onclick=()=>addAttempt(b.dataset.code));
+  el('codesBody').querySelectorAll('.decAtt').forEach(b=>b.onclick=()=>setAttempts([b.dataset.code], (parseInt(b.dataset.n,10)||1)-1));
+  codesShown = shown;
 }
+// ⭐ змінити число спроб (19_admin_set_attempts.sql): −1 у рядку або «Встановити» для всіх показаних
+let codesShown=[];
+async function setAttempts(codes, n){
+  if(!codes.length || n<1) return;
+  const what = codes.length===1 ? 'за кодом '+codes[0] : 'для '+codes.length+' кодів';
+  if(!confirm('Встановити спроб: '+n+' '+what+'? Зіграні спроби і бали не зміняться.')) return;
+  let done=0;
+  for(const code of codes){
+    const { error } = await sb.rpc('admin_set_attempts', { p_code: code, p_n: n });
+    if(error){ alert(/admin_set_attempts|404|schema cache/i.test(error.message) ? 'Спершу виконайте в Supabase файл supabase/19_admin_set_attempts.sql.' : error.message); break; }
+    done++;
+  }
+  if(done) alert('Готово: змінено кодів — '+done+'.');
+  await loadCodes(); await loadResults();
+}
+el('cdSetAll').onclick = () => {
+  const n = parseInt(el('cdSetN').value,10);
+  if(!(n>=1 && n<=10)){ alert('Спроб може бути від 1 до 10.'); return; }
+  setAttempts(codesShown.map(c=>c.code), n);
+};
 // ⭐ кнопка «скопіювати код» (03.10.2026) — один обробник на всю сторінку
 const COPY_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const OK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
@@ -384,7 +408,7 @@ el('cdSearch').oninput=renderCodes;
 el('genCodes').onclick = async () => {
   const gameSlug = el('cGame').value;
   const ids = [...el('cChecks').querySelectorAll('.stChk:checked')].map(ch=>ch.value);
-  const att = parseInt(el('cAttempts').value,10)||2;
+  const att = parseInt(el('cAttempts').value,10)||1;
   if(!gameSlug || !ids.length){ msg('cMsg','Обери гру і хоча б одного учня.','err'); return; }
   msg('cMsg','Генеруємо…');
   const { data, error } = await sb.rpc('admin_create_codes', { p_game_slug:gameSlug, p_student_ids:ids, p_max_attempts:att });
