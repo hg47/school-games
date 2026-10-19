@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="uk" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Майстерня: найкращий план — 10 клас</title>
+<meta name="description" content="Тренажер до теми «Задачі оптимізації»: підберіть, скільки столів A і B випускати за тиждень, подивіться, як витрачаються ресурси, і перевірте свій план усіма можливими планами одразу.">
+<script src="../assets/theme.js"></script>
+<style>
+  /* ТЕМА: світла за замовчуванням, темна — лише за data-theme (кнопка в правому
+     верхньому куті створюється ../assets/theme.js). @media (prefers-color-scheme)
+     тут свідомо немає: за системою сторінка не перемикається. */
+  :root{
+    color-scheme:light;
+    --bg:#eef2f7; --surface:#ffffff; --surface-2:#f4f7fb; --border:#d5dee8;
+    --text:#16232f; --dim:#566878; --faint:#8a9bab;
+    --accent:#2f7de0; --accent-ink:#ffffff; --accent-soft:#e3eefc;
+    --warm:#e8860c; --warm-soft:#fdf0dd;
+    --good:#12a97a; --good-soft:#dcf5ec; --bad:#d1495b; --bad-soft:#fbe4e7;
+    --track:#e6ecf4; --zone:#d9f2e6; --gold:#e3a51a;
+    --shadow:rgba(31,50,72,.10);
+    --mono:"Cascadia Mono","Consolas",ui-monospace,monospace;
+    --sans:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#0f1720; --surface:#16212e; --surface-2:#1d2b3b; --border:#2c3e53;
+    --text:#e7eef5; --dim:#9aabbd; --faint:#6a7e91;
+    --accent:#6cb0ff; --accent-ink:#06121f; --accent-soft:#17324f;
+    --warm:#f6a723; --warm-soft:#3a2a10;
+    --good:#35d29a; --good-soft:#123a2d; --bad:#f2717d; --bad-soft:#3d1c22;
+    --track:#26364a; --zone:#173a2c; --gold:#f2c14e;
+    --shadow:rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--sans);
+    font-size:20px; line-height:1.45}
+  .wrap{max-width:1180px; margin:0 auto; padding:28px 28px 60px}
+  h1{font-size:30px; margin:0 0 4px}
+  .sub{color:var(--dim); margin:0 0 20px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:18px 20px; margin:0 0 16px; box-shadow:0 1px 3px var(--shadow)}
+  .card h2{font-size:22px; margin:0 0 12px}
+  .hint{color:var(--dim); font-size:17px; margin:8px 0 0}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media(max-width:860px){.grid2{grid-template-columns:1fr} .wrap{padding:16px} body{font-size:17px}}
+  table.cond{width:100%; border-collapse:collapse; font-size:19px}
+  table.cond th, table.cond td{padding:7px 10px; border-bottom:1px solid var(--border); text-align:right}
+  table.cond th:first-child, table.cond td:first-child{text-align:left}
+  table.cond th{color:var(--dim); font-weight:600; font-size:16px}
+  table.cond tr.stock td{font-weight:650}
+  button.btn{font:inherit; font-size:17px; padding:8px 14px; border-radius:10px; cursor:pointer;
+    border:1px solid var(--accent); background:var(--accent); color:var(--accent-ink)}
+  button.btn.ghost{background:var(--surface); color:var(--accent)}
+  button.btn.warm{background:var(--warm); border-color:var(--warm); color:#fff}
+  .row{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+  .num{font-family:var(--mono)}
+  /* план */
+  .plan{margin:0 0 16px}
+  .plan .head{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
+  .plan .name{font-weight:650}
+  .stepper{display:flex; align-items:center; gap:6px}
+  .stepper button{font:inherit; width:40px; height:40px; border-radius:10px; cursor:pointer;
+    border:1px solid var(--border); background:var(--surface-2); color:var(--text); font-size:22px; line-height:1}
+  .stepper input{font:inherit; font-family:var(--mono); font-size:24px; width:100px; text-align:center;
+    padding:4px 6px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--text)}
+  input[type=range]{width:100%; accent-color:var(--accent); margin:8px 0 0}
+  /* ресурси */
+  .res{margin:0 0 14px}
+  .res .top{display:flex; justify-content:space-between; gap:10px; font-size:18px}
+  .bar{position:relative; height:26px; border-radius:8px; background:var(--track); margin:6px 0 4px; overflow:hidden}
+  .bar .fill{position:absolute; left:0; top:0; bottom:0; background:var(--good); border-radius:8px 0 0 8px; transition:width .15s}
+  .bar .over{position:absolute; top:0; bottom:0; background:var(--bad); transition:left .15s,width .15s}
+  .bar .limit{position:absolute; top:-2px; bottom:-2px; width:3px; background:var(--text)}
+  .left{font-size:18px}
+  .left.zero{color:var(--good); font-weight:650}
+  .left.neg{color:var(--bad); font-weight:650}
+  .profit{display:flex; justify-content:space-between; align-items:center; gap:12px;
+    background:var(--surface-2); border-radius:12px; padding:12px 16px; margin-top:6px}
+  .profit .v{font-family:var(--mono); font-size:40px; font-weight:700}
+  .status{margin-top:10px; padding:10px 14px; border-radius:10px; font-size:18px}
+  .status.ok{background:var(--good-soft); color:var(--good)}
+  .status.no{background:var(--bad-soft); color:var(--bad)}
+  /* карта */
+  svg.map{width:100%; height:auto; display:block}
+  .legend{display:flex; flex-wrap:wrap; gap:16px; font-size:16px; color:var(--dim); margin-top:6px}
+  .legend i{display:inline-block; width:14px; height:14px; border-radius:3px; margin-right:6px; vertical-align:-2px}
+  /* журнал */
+  table.log{width:100%; border-collapse:collapse; font-size:18px; margin-top:10px}
+  table.log th, table.log td{padding:6px 8px; border-bottom:1px solid var(--border); text-align:right}
+  table.log th{color:var(--dim); font-weight:600; font-size:15px}
+  table.log td.bad{color:var(--bad)}
+  table.log tr.best td{background:var(--good-soft)}
+  .record{font-size:19px; margin-top:10px}
+  .machine{margin-top:12px; padding:12px 16px; border-radius:12px; background:var(--warm-soft); font-size:19px}
+  footer{color:var(--faint); font-size:15px; margin-top:28px}
+  /* кнопка теми — стилі тут, бо site.css не підключений */
+  .themebtn{position:fixed; top:18px; right:18px; z-index:60; display:grid; place-items:center;
+    width:36px; height:36px; padding:0; cursor:pointer; border-radius:999px; color:var(--dim);
+    background:var(--surface); border:1px solid var(--border); box-shadow:0 1px 3px var(--shadow)}
+  .themebtn:hover{color:var(--text)}
+  .themebtn svg{display:block; width:18px; height:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Майстерня: найкращий план</h1>
+  <p class="sub">Скільки столів A і B випускати за тиждень, щоб прибуток був найбільшим, а ресурсів вистачило?</p>
+
+  <div class="card">
+    <h2>Умова</h2>
+    <table class="cond">
+      <tr><th></th><th>Сировина</th><th>Машинний час</th><th>Прибуток</th></tr>
+      <tr><td>Один стіл A</td><td class="num">3</td><td class="num">2</td><td class="num">2</td></tr>
+      <tr><td>Один стіл B</td><td class="num">4</td><td class="num">5</td><td class="num">4</td></tr>
+      <tr class="stock"><td>Є на тиждень</td><td class="num">1700</td><td class="num">1600</td><td></td></tr>
+    </table>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>План на тиждень</h2>
+
+      <div class="plan">
+        <div class="head"><span class="name">Столів A</span>
+          <span class="stepper"><button type="button" data-k="a" data-d="-1" aria-label="Менше столів A">−</button>
+          <input id="aNum" type="number" min="0" max="700" value="0" aria-label="Кількість столів A">
+          <button type="button" data-k="a" data-d="1" aria-label="Більше столів A">+</button></span></div>
+        <input id="aRng" type="range" min="0" max="700" value="0" aria-label="Повзунок столів A">
+      </div>
+
+      <div class="plan">
+        <div class="head"><span class="name">Столів B</span>
+          <span class="stepper"><button type="button" data-k="b" data-d="-1" aria-label="Менше столів B">−</button>
+          <input id="bNum" type="number" min="0" max="450" value="0" aria-label="Кількість столів B">
+          <button type="button" data-k="b" data-d="1" aria-label="Більше столів B">+</button></span></div>
+        <input id="bRng" type="range" min="0" max="450" value="0" aria-label="Повзунок столів B">
+      </div>
+
+      <div class="res">
+        <div class="top"><span>Сировина</span><span class="num"><span id="rawUsed">0</span> з 1700</span></div>
+        <div class="bar"><div class="fill" id="rawFill"></div><div class="over" id="rawOver"></div><div class="limit" id="rawLim"></div></div>
+        <div class="left" id="rawLeft"></div>
+      </div>
+      <div class="res">
+        <div class="top"><span>Машинний час</span><span class="num"><span id="timeUsed">0</span> з 1600</span></div>
+        <div class="bar"><div class="fill" id="timeFill"></div><div class="over" id="timeOver"></div><div class="limit" id="timeLim"></div></div>
+        <div class="left" id="timeLeft"></div>
+      </div>
+
+      <div class="profit"><span>Прибуток</span><span class="v" id="profit">0</span></div>
+      <div class="status" id="status"></div>
+
+      <div class="row" style="margin-top:14px">
+        <button class="btn ghost" type="button" id="onlyB">Лише столи B</button>
+        <button class="btn ghost" type="button" id="onlyA">Лише столи A</button>
+        <button class="btn ghost" type="button" id="reset">Скинути</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Карта планів</h2>
+      <svg class="map" id="map" viewBox="0 0 520 380" role="img" aria-label="Карта планів: зелена зона — плани, на які вистачає ресурсів"></svg>
+      <div class="legend">
+        <span><i style="background:var(--zone)"></i>ресурсів вистачає</span>
+        <span><i style="background:var(--accent)"></i>межа сировини</span>
+        <span><i style="background:var(--warm)"></i>межа машинного часу</span>
+      </div>
+      <p class="hint">Кожна точка — один план. Ваш план — велика точка: зелена, якщо на нього вистачає ресурсів, червона — якщо ні.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Журнал спроб</h2>
+    <div class="row">
+      <button class="btn" type="button" id="save">Записати спробу</button>
+      <button class="btn ghost" type="button" id="clear">Очистити журнал</button>
+    </div>
+    <table class="log" id="log" hidden>
+      <thead><tr><th>№</th><th>Столів A</th><th>Столів B</th><th>Прибуток</th><th>Залишок сировини</th><th>Залишок часу</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="record" id="record">Рекорд з'явиться, коли ви запишете план, на який вистачає ресурсів.</div>
+  </div>
+
+  <div class="card">
+    <h2>Перевірити все — так працює Розв'язувач</h2>
+    <p class="hint" style="margin-top:0">Руками ми пробуємо кілька планів. Машина перевіряє всі цілі плани одразу і знаходить той, кращого за який немає.</p>
+    <div class="row" style="margin-top:12px">
+      <button class="btn warm" type="button" id="check">Перевірити все</button>
+      <button class="btn ghost" type="button" id="showBest" hidden>Поставити план машини</button>
+    </div>
+    <div class="machine" id="machine" hidden></div>
+  </div>
+
+  <footer>© 2025–2026 Процюк О. К. · вчитель інформатики · Харківський ліцей № 47 · CC BY-NC-SA 4.0</footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const RAW = 1700, TIME = 1600;
+  const A = {raw: 3, time: 2, profit: 2}, B = {raw: 4, time: 5, profit: 4};
+  const AMAX = 700, BMAX = 450;
+  const $ = id => document.getElementById(id);
+  const fmt = n => String(n);
+  let a = 0, b = 0, best = null, machineBest = null;
+  const log = [];
+
+  const calc = (x, y) => {
+    const raw = A.raw * x + B.raw * y, time = A.time * x + B.time * y;
+    return {raw, time, profit: A.profit * x + B.profit * y, rawLeft: RAW - raw, timeLeft: TIME - time,
+            ok: raw <= RAW && time <= TIME};
+  };
+
+  // ── смуга ресурсу: шкала до 140 % запасу, щоб перебір було видно ──
+  const bar = (key, used, limit) => {
+    const scale = limit * 1.4;
+    const inside = Math.min(used, limit), over = Math.max(0, Math.min(used, scale) - limit);
+    $(key + "Fill").style.width = (inside / scale * 100) + "%";
+    $(key + "Over").style.left = (limit / scale * 100) + "%";
+    $(key + "Over").style.width = (over / scale * 100) + "%";
+    $(key + "Lim").style.left = "calc(" + (limit / scale * 100) + "% - 1px)";
+    $(key + "Used").textContent = fmt(used);
+    const left = limit - used, el = $(key + "Left");
+    el.className = "left" + (left === 0 ? " zero" : left < 0 ? " neg" : "");
+    el.textContent = left < 0 ? "Не вистачає " + fmt(-left)
+                   : left === 0 ? "Залишок 0 — використано все"
+                   : "Залишок " + fmt(left) + " лежить без роботи";
+  };
+
+  // ── карта планів ──
+  const W = 520, H = 380, L = 56, R = 16, T = 14, Bm = 44;
+  const px = x => L + x / AMAX * (W - L - R);
+  const py = y => H - Bm - y / BMAX * (H - T - Bm);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const map = $("map");
+
+  const drawMap = () => {
+    const c = calc(a, b);
+    const zone = [[0, 0], [1700 / 3, 0], [300, 200], [0, 320]].map(p => px(p[0]) + "," + py(p[1])).join(" ");
+    let s = "";
+    s += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="' + css("--surface") + '"/>';
+    s += '<polygon points="' + zone + '" fill="' + css("--zone") + '"/>';
+    for (let x = 0; x <= AMAX; x += 100) {
+      s += '<line x1="' + px(x) + '" y1="' + py(0) + '" x2="' + px(x) + '" y2="' + py(BMAX) + '" stroke="' + css("--border") + '"/>';
+      s += '<text x="' + px(x) + '" y="' + (H - Bm + 20) + '" font-size="13" text-anchor="middle" fill="' + css("--dim") + '">' + x + "</text>";
+    }
+    for (let y = 0; y <= BMAX; y += 100) {
+      s += '<line x1="' + px(0) + '" y1="' + py(y) + '" x2="' + px(AMAX) + '" y2="' + py(y) + '" stroke="' + css("--border") + '"/>';
+      s += '<text x="' + (L - 8) + '" y="' + (py(y) + 4) + '" font-size="13" text-anchor="end" fill="' + css("--dim") + '">' + y + "</text>";
+    }
+    s += '<text x="' + (W - R) + '" y="' + (H - 6) + '" font-size="14" text-anchor="end" fill="' + css("--text") + '">столів A →</text>';
+    s += '<text x="12" y="' + (T + 6) + '" font-size="14" fill="' + css("--text") + '" transform="rotate(-90 12 ' + (T + 6) + ')" text-anchor="end">столів B →</text>';
+    // межі ресурсів
+    s += '<line x1="' + px(0) + '" y1="' + py(425) + '" x2="' + px(1700 / 3) + '" y2="' + py(0) + '" stroke="' + css("--accent") + '" stroke-width="3"/>';
+    s += '<line x1="' + px(0) + '" y1="' + py(320) + '" x2="' + px(700) + '" y2="' + py(40) + '" stroke="' + css("--warm") + '" stroke-width="3"/>';
+    // записані спроби
+    log.forEach(r => {
+      s += '<circle cx="' + px(r.a) + '" cy="' + py(r.b) + '" r="5" fill="' + (r.ok ? css("--dim") : css("--bad")) + '" opacity=".7"/>';
+    });
+    // план машини
+    if (machineBest) {
+      s += '<circle cx="' + px(machineBest.a) + '" cy="' + py(machineBest.b) + '" r="11" fill="none" stroke="' + css("--gold") + '" stroke-width="4"/>';
+    }
+    // поточний план
+    s += '<circle cx="' + px(a) + '" cy="' + py(b) + '" r="9" fill="' + (c.ok ? css("--good") : css("--bad")) + '" stroke="' + css("--surface") + '" stroke-width="2"/>';
+    map.innerHTML = s;
+  };
+
+  const render = () => {
+    const c = calc(a, b);
+    $("aNum").value = a; $("aRng").value = a; $("bNum").value = b; $("bRng").value = b;
+    bar("raw", c.raw, RAW);
+    bar("time", c.time, TIME);
+    $("profit").textContent = fmt(c.profit);
+    const st = $("status");
+    if (c.ok) {
+      st.className = "status ok";
+      st.textContent = "Ресурсів вистачає: такий план можна виконати.";
+    } else {
+      st.className = "status no";
+      const miss = [];
+      if (c.rawLeft < 0) miss.push("сировини на " + fmt(-c.rawLeft));
+      if (c.timeLeft < 0) miss.push("машинного часу на " + fmt(-c.timeLeft));
+      st.textContent = "Такий план виконати неможливо: не вистачає " + miss.join(" і ") + ".";
+    }
+    drawMap();
+  };
+
+  const clamp = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
+  const set = (na, nb) => { a = clamp(na, AMAX); b = clamp(nb, BMAX); render(); };
+
+  $("aRng").addEventListener("input", e => set(e.target.value, b));
+  $("bRng").addEventListener("input", e => set(a, e.target.value));
+  $("aNum").addEventListener("change", e => set(e.target.value, b));
+  $("bNum").addEventListener("change", e => set(a, e.target.value));
+  document.querySelectorAll(".stepper button").forEach(btn => btn.addEventListener("click", () => {
+    const d = Number(btn.dataset.d);
+    btn.dataset.k === "a" ? set(a + d, b) : set(a, b + d);
+  }));
+  $("onlyB").addEventListener("click", () => set(0, 320));
+  $("onlyA").addEventListener("click", () => set(566, 0));
+  $("reset").addEventListener("click", () => set(0, 0));
+
+  // ── журнал спроб ──
+  const renderLog = () => {
+    const tb = $("log").querySelector("tbody");
+    $("log").hidden = log.length === 0;
+    tb.innerHTML = log.map((r, i) =>
+      '<tr' + (best && r === best ? ' class="best"' : "") + '><td>' + (i + 1) + "</td><td>" + fmt(r.a) + "</td><td>" + fmt(r.b) +
+      "</td><td>" + fmt(r.profit) + '</td><td class="' + (r.rawLeft < 0 ? "bad" : "") + '">' + fmt(r.rawLeft) +
+      '</td><td class="' + (r.timeLeft < 0 ? "bad" : "") + '">' + fmt(r.timeLeft) + "</td></tr>").join("");
+    $("record").textContent = best
+      ? "Ваш рекорд: прибуток " + fmt(best.profit) + " (столів A — " + fmt(best.a) + ", столів B — " + fmt(best.b) + ")."
+      : "Рекорд з'явиться, коли ви запишете план, на який вистачає ресурсів.";
+  };
+  $("save").addEventListener("click", () => {
+    const r = Object.assign({a, b}, calc(a, b));
+    log.push(r);
+    if (r.ok && (!best || r.profit > best.profit)) best = r;
+    renderLog(); drawMap(); compare();
+  });
+  $("clear").addEventListener("click", () => { log.length = 0; best = null; renderLog(); drawMap(); compare(); });
+
+  // ── машина: перебір усіх цілих планів ──
+  const compare = () => {
+    if (!machineBest) return;
+    const m = machineBest;
+    let txt = "Перевірено " + fmt(m.total) + " планів, з них ресурсів вистачає на " + fmt(m.feasible) + ". " +
+              "Найкращий: " + fmt(m.a) + " столів A і " + fmt(m.b) + " столів B, прибуток " + fmt(m.profit) +
+              ". Залишки: сировини " + fmt(m.rawLeft) + ", машинного часу " + fmt(m.timeLeft) + ".";
+    if (best) {
+      txt += best.profit === m.profit
+        ? " Ваш рекорд такий самий — ви знайшли найкращий план."
+        : " Ваш рекорд " + fmt(best.profit) + " — до найкращого ще " + fmt(m.profit - best.profit) + ".";
+    }
+    $("machine").textContent = txt;
+  };
+  $("check").addEventListener("click", () => {
+    let total = 0, feasible = 0, top = null;
+    for (let x = 0; x <= AMAX; x++) for (let y = 0; y <= BMAX; y++) {
+      total++;
+      const c = calc(x, y);
+      if (!c.ok) continue;
+      feasible++;
+      if (!top || c.profit > top.profit) top = Object.assign({a: x, b: y}, c);
+    }
+    machineBest = Object.assign(top, {total, feasible});
+    $("machine").hidden = false;
+    $("showBest").hidden = false;
+    compare(); drawMap();
+  });
+  $("showBest").addEventListener("click", () => machineBest && set(machineBest.a, machineBest.b));
+
+  // перемальовувати карту після зміни теми
+  new MutationObserver(drawMap).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
+  // ?a=300&b=200 у адресі — відкрити одразу з цим планом
+  const q = new URLSearchParams(location.search);
+  if (q.has("a") || q.has("b")) { a = clamp(q.get("a"), AMAX); b = clamp(q.get("b"), BMAX); }
+  render(); renderLog();
+})();
+</script>
+</body>
+</html>

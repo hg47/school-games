@@ -451,14 +451,14 @@
    "w": 1600
   },
   {
-   "bytes": 531866,
+   "bytes": 925394,
    "cls": "6-й",
    "deck": "Презентація - Анімація слайдів",
    "h": 900,
    "lesson": "07",
    "lesson_no": 7,
    "pdf": true,
-   "slides": 12,
+   "slides": 16,
    "slug": "6-a-07-animatsiya-slaydiv-efekty-perekhodiv",
    "title": "Анімація слайдів (ефекти переходів)",
    "unit": "Тема 2. Комп'ютерні презентації",
