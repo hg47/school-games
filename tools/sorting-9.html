@@ -223,7 +223,7 @@ function bubbleEvents(a0, byLine) {
     }
     done.push(n - 1 - i);
     ev.push(E({ arr: a.slice(), done: done.slice(), line: [10], vars: { i: i }, pass: i + 1, passEnd: true,
-      text: swaps ? "Кінець проходу " + (i + 1) + ": " + a[n - 1 - i] + " спливло на своє місце, і print показує список." :
+      text: swaps ? "Кінець проходу " + (i + 1) + ": " + a[n - 1 - i] + " перейшло на своє місце, і print показує список." :
                     "Прохід " + (i + 1) + ": жодного обміну. Усе вже стоїть по порядку." }));
   }
   done.push(0);
