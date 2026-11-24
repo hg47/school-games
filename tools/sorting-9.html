@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="uk" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Візуалізатор сортування — 9 клас</title>
+<meta name="description" content="Метод обміну і метод вибору крок за кроком: підсвічується рядок коду Python, який зараз виконується, і видно, що він робить зі списком. Плюс перегони трьох алгоритмів сортування.">
+<script src="../assets/theme.js"></script>
+<style>
+/* ТЕМА: світла за замовчуванням, темна — лише за data-theme (кнопку створює ../assets/theme.js на сайті).
+   @media (prefers-color-scheme) тут свідомо немає. Локальна копія в теці уроку працює без кнопки теми. */
+:root{
+  --bg:#f4f6fb; --card:#ffffff; --ink:#16233f; --muted:#5b6b88; --line:#d6dcea;
+  --bar:#8fa6cc; --cmp:#f5b700; --swap:#f2762e; --min:#2f7de0; --done:#2e9e6e;
+  --btn:#2f7de0; --btn-ink:#ffffff; --code:#0f1b33; --code-ink:#e6ecf7; --lane:#eef1f8;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#0f1720; --card:#16212e; --ink:#e7eef5; --muted:#9aabbd; --line:#2c3e53;
+  --bar:#5f7aa6; --btn:#6cb0ff; --btn-ink:#06121f; --code:#0b1220; --lane:#1d2b3b;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Arial,sans-serif;font-size:20px}
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 72px 12px 24px;background:var(--card);border-bottom:1px solid var(--line)}
+header h1{font-size:25px;margin:0 16px 0 0}
+.tab{border:2px solid var(--btn);background:var(--card);color:var(--btn);border-radius:12px;padding:8px 18px;font-size:19px;font-weight:600;cursor:pointer}
+.tab.on{background:var(--btn);color:var(--btn-ink)}
+main{max-width:1500px;margin:0 auto;padding:14px 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 20px;margin-bottom:14px}
+.status{font-size:25px;font-weight:600;min-height:68px;line-height:1.35}
+.grid{display:grid;grid-template-columns:minmax(0,46fr) minmax(0,54fr);gap:14px}
+.codebox{background:var(--code);color:var(--code-ink);border-radius:16px;padding:14px 0;font-family:Consolas,"Courier New",monospace;font-size:21px;line-height:1.5;overflow:hidden}
+.ln{display:flex;padding:0 16px 0 0;border-left:6px solid transparent;white-space:pre}
+.ln .no{width:44px;text-align:right;color:#6c7fa3;margin-right:16px;flex:none}
+.ln.on{background:#2c3f6b;border-left-color:var(--cmp)}
+.ln .kw{color:#ff9e64}.ln .fn{color:#7dcfff}.ln .num{color:#c3e88d}.ln .str{color:#e6c07b}.ln .com{color:#7f8fb0}
+.vars{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;min-height:56px}
+.var{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:6px 14px;font-family:Consolas,monospace;font-size:22px}
+.var b{color:var(--min)}
+.var.x{border-color:var(--swap)}
+.bars{display:flex;align-items:flex-end;justify-content:center;gap:14px;height:360px}
+.col{display:flex;flex-direction:column;align-items:center;flex:1;max-width:110px}
+.val{font-size:28px;font-weight:700;margin-bottom:6px}
+.bar{width:100%;border-radius:12px 12px 4px 4px;background:var(--bar);border:4px solid transparent}
+.bar.cmp{background:var(--cmp)}
+.bar.swap{background:var(--swap)}
+.bar.done{background:var(--done)}
+.bar.min{border-color:var(--min);box-shadow:0 0 0 3px var(--min)}
+.idx{font-size:17px;color:var(--muted);margin-top:6px}
+.tag{font-size:16px;font-weight:700;color:var(--min);height:22px;margin-top:2px;font-family:Consolas,monospace}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.btn{border:0;background:var(--btn);color:var(--btn-ink);border-radius:12px;padding:11px 20px;font-size:20px;font-weight:600;cursor:pointer}
+.btn.ghost{background:var(--card);color:var(--btn);border:2px solid var(--btn)}
+.btn:disabled{opacity:.4;cursor:default}
+.counters{display:flex;gap:26px;font-size:21px;margin-left:auto}
+.counters b{font-size:27px}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:16px;color:var(--muted);margin-top:8px}
+.sw{display:inline-block;width:18px;height:18px;border-radius:5px;vertical-align:-3px;margin-right:6px}
+label{font-size:18px;color:var(--muted)}
+input[type=text]{font-size:20px;padding:8px 10px;border:2px solid var(--line);border-radius:10px;width:300px}
+.lane{margin-bottom:18px}
+.lane h3{margin:0 0 6px;font-size:21px;display:flex;justify-content:space-between}
+.lane .mini{display:flex;align-items:flex-end;gap:3px;height:130px;background:var(--lane);border-radius:10px;padding:6px}
+.lane .mini div{flex:1;background:var(--bar);border-radius:3px 3px 0 0}
+.lane .mini div.cmp{background:var(--cmp)}
+.lane.fin .mini div{background:var(--done)}
+.hidden{display:none}
+.note{font-size:17px;color:var(--muted)}
+.themebtn{position:fixed;top:18px;right:18px;z-index:60;display:grid;place-items:center;width:36px;height:36px;padding:0;cursor:pointer;border-radius:999px;color:var(--muted);background:var(--card);border:1px solid var(--line)}
+.themebtn:hover{color:var(--ink)}
+.themebtn svg{display:block;width:18px;height:18px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Сортування крок за кроком</h1>
+  <button class="tab on" data-mode="bubble">Метод обміну</button>
+  <button class="tab" data-mode="select">Метод вибору</button>
+  <button class="tab" data-mode="race">Перегони</button>
+</header>
+
+<main>
+  <!-- Один метод: код ліворуч, стовпчики праворуч -->
+  <section id="single">
+    <div class="card"><div class="status" id="status"></div></div>
+    <div class="grid">
+      <div>
+        <div class="codebox" id="code"></div>
+        <div class="vars" id="vars"></div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="bars" id="bars"></div>
+        <div class="legend">
+          <span><i class="sw" style="background:var(--cmp)"></i>порівнюємо</span>
+          <span><i class="sw" style="background:var(--swap)"></i>записуємо нове значення</span>
+          <span id="lgMin"><i class="sw" style="background:var(--card);box-shadow:0 0 0 3px var(--min)"></i>найменше, яке знайшли досі</span>
+          <span><i class="sw" style="background:var(--done)"></i>вже на своєму місці</span>
+        </div>
+      </div>
+    </div>
+    <div class="card row" style="margin-top:14px">
+      <button class="btn" id="step">Крок ▶</button>
+      <button class="btn ghost" id="pass">До кінця проходу</button>
+      <button class="btn ghost" id="reset">Спочатку</button>
+      <label><input type="checkbox" id="ask" checked> питання перед порівнянням</label>
+      <label><input type="checkbox" id="byline" checked> обмін по рядках</label>
+      <div class="counters">
+        <span>Прохід: <b id="cPass">0</b></span>
+        <span>Порівнянь: <b id="cCmp">0</b></span>
+        <span>Обмінів: <b id="cSwp">0</b></span>
+      </div>
+    </div>
+    <div class="card row">
+      <label for="nums">Очки гравців:</label>
+      <input type="text" id="nums" value="120, 85, 150, 85, 60, 135">
+      <button class="btn ghost" id="apply">Взяти ці числа</button>
+      <span class="note">від 2 до 8 чисел через кому · пробіл або → = «Крок»</span>
+    </div>
+  </section>
+
+  <!-- Перегони -->
+  <section id="race" class="hidden">
+    <div class="card">
+      <div class="status" id="rStatus"></div>
+    </div>
+    <div class="card">
+      <div class="lane" id="lane0"><h3><span>Метод обміну</span><span class="lc"></span></h3><div class="mini"></div></div>
+      <div class="lane" id="lane1"><h3><span>Метод вибору</span><span class="lc"></span></h3><div class="mini"></div></div>
+      <div class="lane" id="lane2"><h3><span>Хитріший алгоритм — так працює sort</span><span class="lc"></span></h3><div class="mini"></div></div>
+    </div>
+    <div class="card row">
+      <button class="btn" id="rGo">Старт ▶</button>
+      <button class="btn ghost" id="rNew">Нові очки</button>
+      <label>Швидкість <input type="range" id="rSpeed" min="1" max="20" value="6"></label>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+var $ = function (id) { return document.getElementById(id); };
+
+/* ---------- код: дослівно як у демо-записнику уроку (кроки 4 і 5) ---------- */
+var CODE = {
+  bubble: [
+    "# Очки шести гравців у турнірі",
+    "ochky = @DATA@",
+    "n = len(ochky)",
+    "for i in range(n - 1):",
+    "    for j in range(n - 1 - i):",
+    "        if ochky[j] > ochky[j + 1]:",
+    "            x = ochky[j]",
+    "            ochky[j] = ochky[j + 1]",
+    "            ochky[j + 1] = x",
+    "    print('Прохід', i + 1, '—', ochky)"
+  ],
+  select: [
+    "# Очки шести гравців у турнірі",
+    "ochky = @DATA@",
+    "n = len(ochky)",
+    "for i in range(n - 1):",
+    "    mini = ochky[i]",
+    "    nmini = i",
+    "    for j in range(i + 1, n):",
+    "        if ochky[j] < mini:",
+    "            mini = ochky[j]",
+    "            nmini = j",
+    "    ochky[nmini] = ochky[i]",
+    "    ochky[i] = mini",
+    "    print('Прохід', i + 1, '—', ochky)"
+  ]
+};
+
+function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function paint(line) {
+  var com = "", k = line.indexOf("#");
+  if (k >= 0) { com = '<span class="com">' + esc(line.slice(k)) + '</span>'; line = line.slice(0, k); }
+  var parts = line.split(/('[^']*')/);
+  return parts.map(function (p, i) {
+    if (i % 2) return '<span class="str">' + esc(p) + '</span>';
+    return esc(p)
+      .replace(/\b(for|in|if|else)\b/g, '<span class="kw">$1</span>')
+      .replace(/\b(range|len|print)\b/g, '<span class="fn">$1</span>')
+      .replace(/\b(\d+)\b/g, '<span class="num">$1</span>');
+  }).join("") + com;
+}
+
+/* ---------- події одного методу ---------- */
+function E(o) { return o; }
+
+function bubbleEvents(a0, byLine) {
+  var a = a0.slice(), n = a.length, ev = [], done = [];
+  ev.push(E({ arr: a.slice(), done: [], line: [2, 3], vars: { n: n },
+    text: "Метод обміну: порівнюємо сусідів зліва направо, і більший стає праворуч. Натисніть «Крок»." }));
+  for (var i = 0; i < n - 1; i++) {
+    var swaps = 0;
+    ev.push(E({ arr: a.slice(), done: done.slice(), line: [4], vars: { i: i }, pass: i + 1,
+      text: "Починаємо прохід " + (i + 1) + ". У цьому проході перевіряємо " + (n - 1 - i) + " пар сусідів." }));
+    for (var j = 0; j < n - 1 - i; j++) {
+      var x = a[j], y = a[j + 1];
+      ev.push(E({ arr: a.slice(), done: done.slice(), cmp: [j, j + 1], line: [5, 6], vars: { i: i, j: j }, pass: i + 1, count: "cmp", ask: true,
+        text: "Порівнюємо ochky[" + j + "] і ochky[" + (j + 1) + "]: " + x + " і " + y + ". Поміняються вони місцями?" }));
+      if (x > y) {
+        if (byLine) {
+          ev.push(E({ arr: a.slice(), done: done.slice(), cmp: [j, j + 1], line: [7], vars: { i: i, j: j, x: x }, pass: i + 1,
+            text: x + " більше за " + y + ", тому міняємо. Спершу ховаємо " + x + " у змінну x." }));
+          a[j] = y;
+          ev.push(E({ arr: a.slice(), done: done.slice(), swap: [j], line: [8], vars: { i: i, j: j, x: x }, pass: i + 1,
+            text: "Записуємо " + y + " на місце " + j + ". Тепер " + y + " стоїть двічі, а " + x + " лишилося тільки у змінній x." }));
+          a[j + 1] = x; swaps++;
+          ev.push(E({ arr: a.slice(), done: done.slice(), swap: [j + 1], line: [9], vars: { i: i, j: j, x: x }, pass: i + 1, count: "swp",
+            text: "Беремо " + x + " зі змінної x і записуємо на місце " + (j + 1) + ". Обмін завершено." }));
+        } else {
+          a[j] = y; a[j + 1] = x; swaps++;
+          ev.push(E({ arr: a.slice(), done: done.slice(), swap: [j, j + 1], line: [7, 8, 9], vars: { i: i, j: j, x: x }, pass: i + 1, count: "swp",
+            text: x + " більше за " + y + ", тому міняємо їх місцями через змінну x." }));
+        }
+      } else {
+        ev.push(E({ arr: a.slice(), done: done.slice(), cmp: [j, j + 1], line: [6], vars: { i: i, j: j }, pass: i + 1,
+          text: x + " не більше за " + y + ". Умова не виконується, тому рядки обміну пропускаємо." }));
+      }
+    }
+    done.push(n - 1 - i);
+    ev.push(E({ arr: a.slice(), done: done.slice(), line: [10], vars: { i: i }, pass: i + 1, passEnd: true,
+      text: swaps ? "Кінець проходу " + (i + 1) + ": " + a[n - 1 - i] + " спливло на своє місце, і print показує список." :
+                    "Прохід " + (i + 1) + ": жодного обміну. Усе вже стоїть по порядку." }));
+  }
+  done.push(0);
+  ev.push(E({ arr: a.slice(), done: done.slice(), fin: true, line: [], vars: {}, text: "" }));
+  return ev;
+}
+
+function selectEvents(a0, byLine) {
+  var a = a0.slice(), n = a.length, ev = [], done = [];
+  ev.push(E({ arr: a.slice(), done: [], line: [2, 3], vars: { n: n },
+    text: "Метод вибору: шукаємо найменше в решті списку і ставимо його на початок решти. Натисніть «Крок»." }));
+  for (var i = 0; i < n - 1; i++) {
+    var m = i, mv = a[i];
+    ev.push(E({ arr: a.slice(), done: done.slice(), min: m, line: [4, 5, 6], vars: { i: i, mini: mv, nmini: m }, pass: i + 1,
+      text: "Прохід " + (i + 1) + ". Спершу вважаємо найменшим перше значення решти: " + mv + " під номером " + i + "." }));
+    for (var j = i + 1; j < n; j++) {
+      ev.push(E({ arr: a.slice(), done: done.slice(), min: m, cmp: [j], line: [7, 8], vars: { i: i, j: j, mini: mv, nmini: m }, pass: i + 1, count: "cmp", ask: true,
+        text: "Порівнюємо ochky[" + j + "] = " + a[j] + " зі змінною mini = " + mv + ". " + a[j] + " менше?" }));
+      if (a[j] < mv) {
+        m = j; mv = a[j];
+        ev.push(E({ arr: a.slice(), done: done.slice(), min: m, line: [9, 10], vars: { i: i, j: j, mini: mv, nmini: m }, pass: i + 1,
+          text: "Так. Тепер у змінній mini " + mv + ", а в змінній nmini його номер " + m + "." }));
+      } else {
+        ev.push(E({ arr: a.slice(), done: done.slice(), min: m, cmp: [j], line: [8], vars: { i: i, j: j, mini: mv, nmini: m }, pass: i + 1,
+          text: "Ні. У змінній mini залишається " + mv + "." }));
+      }
+    }
+    var first = a[i];
+    if (m !== i) {
+      if (byLine) {
+        a[m] = first;
+        ev.push(E({ arr: a.slice(), done: done.slice(), swap: [m], line: [11], vars: { i: i, mini: mv, nmini: m }, pass: i + 1,
+          text: "Найменше в решті — " + mv + ". Спершу на його місце, номер " + m + ", записуємо " + first + ". Саме " + mv + " не загубилося: воно лежить у змінній mini." }));
+        a[i] = mv;
+        ev.push(E({ arr: a.slice(), done: done.slice(), swap: [i], line: [12], vars: { i: i, mini: mv, nmini: m }, pass: i + 1, count: "swp",
+          text: "А тепер на початок решти, на місце " + i + ", ставимо " + mv + " зі змінної mini." }));
+      } else {
+        a[m] = first; a[i] = mv;
+        ev.push(E({ arr: a.slice(), done: done.slice(), swap: [i, m], line: [11, 12], vars: { i: i, mini: mv, nmini: m }, pass: i + 1, count: "swp",
+          text: "Міняємо місцями " + mv + " і " + first + ": " + mv + " стає на місце " + i + "." }));
+      }
+    } else {
+      ev.push(E({ arr: a.slice(), done: done.slice(), min: m, line: [11, 12], vars: { i: i, mini: mv, nmini: m }, pass: i + 1,
+        text: "Найменше " + mv + " вже стоїть на початку решти. Ці два рядки записують його саме на себе, і нічого не змінюється." }));
+    }
+    done.push(i);
+    ev.push(E({ arr: a.slice(), done: done.slice(), line: [13], vars: { i: i }, pass: i + 1, passEnd: true,
+      text: "Кінець проходу " + (i + 1) + ": " + a[i] + " на своєму місці, і print показує список." }));
+  }
+  done.push(n - 1);
+  ev.push(E({ arr: a.slice(), done: done.slice(), fin: true, line: [], vars: {}, text: "" }));
+  return ev;
+}
+
+/* ---------- стан і малювання ---------- */
+var mode = "bubble", data = [120, 85, 150, 85, 60, 135], events = [], pos = 0, nCmp = 0, nSwp = 0, pass = 0;
+
+function build() {
+  var byLine = $("byline").checked;
+  events = mode === "bubble" ? bubbleEvents(data, byLine) : selectEvents(data, byLine);
+  pos = 0; nCmp = 0; nSwp = 0; pass = 0;
+  $("lgMin").style.display = mode === "select" ? "" : "none";
+  draw();
+}
+
+function drawCode(e) {
+  var lines = CODE[mode];
+  $("code").innerHTML = lines.map(function (s, k) {
+    s = s.replace("@DATA@", "[" + data.join(", ") + "]");
+    return '<div class="ln' + (e.line.indexOf(k + 1) >= 0 ? " on" : "") + '"><span class="no">' + (k + 1) + '</span><span>' + paint(s) + '</span></div>';
+  }).join("");
+  var v = e.vars || {};
+  $("vars").innerHTML = Object.keys(v).map(function (k) {
+    return '<span class="var' + (k === "x" ? " x" : "") + '">' + k + ' = <b>' + v[k] + '</b></span>';
+  }).join("");
+}
+
+function draw() {
+  var e = events[pos], max = Math.max.apply(null, data), box = $("bars");
+  box.innerHTML = "";
+  e.arr.forEach(function (v, k) {
+    var col = document.createElement("div"); col.className = "col";
+    var cls = "bar";
+    if (e.fin || e.done.indexOf(k) >= 0) cls += " done";
+    if (e.cmp && e.cmp.indexOf(k) >= 0) cls += " cmp";
+    if (e.swap && e.swap.indexOf(k) >= 0) cls += " swap";
+    if (e.min === k) cls += " min";
+    col.innerHTML = '<div class="val">' + v + '</div>' +
+      '<div class="' + cls + '" style="height:' + Math.max(14, Math.round(270 * v / max)) + 'px"></div>' +
+      '<div class="idx">номер ' + k + '</div>' +
+      '<div class="tag">' + (e.min === k ? "nmini" : "") + '</div>';
+    box.appendChild(col);
+  });
+  drawCode(e);
+  $("status").textContent = e.fin ?
+    "Готово! Список відсортовано: " + nCmp + " порівнянь і " + nSwp + " обмінів." : e.text;
+  $("cPass").textContent = pass; $("cCmp").textContent = nCmp; $("cSwp").textContent = nSwp;
+  $("step").disabled = $("pass").disabled = !!e.fin;
+}
+
+function advance() {
+  if (events[pos].fin) return;
+  pos++;
+  var e = events[pos];
+  if (e.count === "cmp") nCmp++;
+  if (e.count === "swp") nSwp++;
+  if (e.pass) pass = e.pass;
+  if (e.ask && !$("ask").checked) { advance(); return; }
+  draw();
+}
+
+$("step").onclick = advance;
+$("pass").onclick = function () {
+  do { advance(); } while (!events[pos].passEnd && !events[pos].fin);
+};
+$("reset").onclick = build;
+$("byline").onchange = build;
+$("apply").onclick = function () {
+  var v = $("nums").value.split(/[,;\s]+/).filter(Boolean).map(Number);
+  if (v.length < 2 || v.length > 8 || v.some(function (x) { return !isFinite(x) || x <= 0 || x > 999; })) {
+    $("status").textContent = "Потрібно від 2 до 8 чисел від 1 до 999 через кому.";
+    return;
+  }
+  data = v; build();
+};
+document.addEventListener("keydown", function (ev) {
+  if (ev.target.tagName === "INPUT" && ev.target.type === "text") return;
+  if ((ev.code === "Space" || ev.code === "ArrowRight") && mode !== "race") { ev.preventDefault(); advance(); }
+});
+
+/* ---------- перегони ---------- */
+function* bubbleGen(a) {
+  for (var i = 0; i < a.length - 1; i++)
+    for (var j = 0; j < a.length - 1 - i; j++) {
+      yield [j, j + 1];
+      if (a[j] > a[j + 1]) { var t = a[j]; a[j] = a[j + 1]; a[j + 1] = t; }
+    }
+}
+function* selectGen(a) {
+  for (var i = 0; i < a.length - 1; i++) {
+    var m = i;
+    for (var j = i + 1; j < a.length; j++) { yield [j, m]; if (a[j] < a[m]) m = j; }
+    var t = a[i]; a[i] = a[m]; a[m] = t;
+  }
+}
+function* mergeGen(a) {      /* злиття знизу вгору: той самий принцип, що в sort */
+  var n = a.length;
+  for (var w = 1; w < n; w *= 2)
+    for (var lo = 0; lo < n - w; lo += 2 * w) {
+      var mid = lo + w, hi = Math.min(lo + 2 * w, n);
+      var L = a.slice(lo, mid), R = a.slice(mid, hi), p = 0, q = 0, k = lo;
+      while (p < L.length && q < R.length) {
+        yield [lo + p, mid + q];
+        a[k++] = L[p] <= R[q] ? L[p++] : R[q++];
+      }
+      while (p < L.length) a[k++] = L[p++];
+      while (q < R.length) a[k++] = R[q++];
+    }
+}
+
+var lanes = [], timer = null, RSTART = "30 гравців, однакові очки на всіх трьох доріжках. Кожен такт — одне порівняння на кожній доріжці.";
+function newRace() {
+  stopRace();
+  var d = [];
+  for (var i = 0; i < 30; i++) d.push(10 + Math.floor(Math.random() * 190));
+  lanes = [bubbleGen, selectGen, mergeGen].map(function (g, k) {
+    var arr = d.slice();
+    return { arr: arr, it: g(arr), cmp: 0, fin: false, hl: [], el: $("lane" + k) };
+  });
+  lanes.forEach(drawLane);
+  $("rStatus").textContent = RSTART;
+  $("rGo").textContent = "Старт ▶"; $("rGo").disabled = false;
+}
+function drawLane(L) {
+  L.el.querySelector(".mini").innerHTML = L.arr.map(function (v, k) {
+    return '<div class="' + (L.hl.indexOf(k) >= 0 && !L.fin ? "cmp" : "") + '" style="height:' + Math.round(v / 2) + '%"></div>';
+  }).join("");
+  L.el.classList.toggle("fin", L.fin);
+  L.el.querySelector(".lc").textContent = (L.fin ? "готово · " : "") + L.cmp + " порівнянь";
+}
+function tick() {
+  var steps = +$("rSpeed").value;
+  for (var s = 0; s < steps; s++)
+    lanes.forEach(function (L) {
+      if (L.fin) return;
+      var r = L.it.next();
+      if (r.done) { L.fin = true; L.hl = []; } else { L.cmp++; L.hl = r.value; }
+    });
+  lanes.forEach(drawLane);
+  if (lanes.every(function (L) { return L.fin; })) {
+    stopRace();
+    $("rStatus").textContent = "Фініш. Обмін і вибір зробили по " + lanes[0].cmp + " порівнянь, а хитріший алгоритм — лише " + lanes[2].cmp + ".";
+    $("rGo").disabled = true;
+  }
+}
+function stopRace() { if (timer) { clearInterval(timer); timer = null; } }
+$("rGo").onclick = function () {
+  if (timer) { stopRace(); $("rGo").textContent = "Далі ▶"; }
+  else { timer = setInterval(tick, 60); $("rGo").textContent = "Пауза ❚❚"; }
+};
+$("rNew").onclick = newRace;
+
+/* ---------- вкладки ---------- */
+document.querySelectorAll(".tab").forEach(function (b) {
+  b.onclick = function () {
+    document.querySelectorAll(".tab").forEach(function (t) { t.classList.toggle("on", t === b); });
+    mode = b.dataset.mode;
+    $("single").classList.toggle("hidden", mode === "race");
+    $("race").classList.toggle("hidden", mode !== "race");
+    stopRace();
+    if (mode === "race") newRace(); else build();
+  };
+});
+
+build();
+</script>
+</body>
+</html>
