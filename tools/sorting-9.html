@@ -67,6 +67,7 @@ input[type=text]{font-size:20px;padding:8px 10px;border:2px solid var(--line);bo
 .lane.fin .mini div{background:var(--done)}
 .hidden{display:none}
 .note{font-size:17px;color:var(--muted)}
+#clk{position:absolute;right:16px;bottom:8px;font-size:15px;color:var(--muted);font-family:Consolas,monospace}
 .themebtn{position:fixed;top:18px;right:18px;z-index:60;display:grid;place-items:center;width:36px;height:36px;padding:0;cursor:pointer;border-radius:999px;color:var(--muted);background:var(--card);border:1px solid var(--line)}
 .themebtn:hover{color:var(--ink)}
 .themebtn svg{display:block;width:18px;height:18px}
@@ -83,7 +84,7 @@ input[type=text]{font-size:20px;padding:8px 10px;border:2px solid var(--line);bo
 <main>
   <!-- Один метод: код ліворуч, стовпчики праворуч -->
   <section id="single">
-    <div class="card"><div class="status" id="status"></div></div>
+    <div class="card" style="position:relative"><div class="status" id="status"></div><span id="clk" title="Номер кліку — для звірки зі сценарієм">клік 0</span></div>
     <div class="grid">
       <div>
         <div class="codebox" id="code"></div>
@@ -188,6 +189,7 @@ function paint(line) {
 
 /* ---------- події одного методу ---------- */
 function E(o) { return o; }
+function pairs(k) { return k + (k === 1 ? " пару" : (k >= 2 && k <= 4 ? " пари" : " пар")); }
 
 function bubbleEvents(a0, byLine) {
   var a = a0.slice(), n = a.length, ev = [], done = [];
@@ -196,7 +198,7 @@ function bubbleEvents(a0, byLine) {
   for (var i = 0; i < n - 1; i++) {
     var swaps = 0;
     ev.push(E({ arr: a.slice(), done: done.slice(), line: [4], vars: { i: i }, pass: i + 1,
-      text: "Починаємо прохід " + (i + 1) + ". У цьому проході перевіряємо " + (n - 1 - i) + " пар сусідів." }));
+      text: "Починаємо прохід " + (i + 1) + ". У цьому проході перевіряємо " + pairs(n - 1 - i) + " сусідів." }));
     for (var j = 0; j < n - 1 - i; j++) {
       var x = a[j], y = a[j + 1];
       ev.push(E({ arr: a.slice(), done: done.slice(), cmp: [j, j + 1], line: [5, 6], vars: { i: i, j: j }, pass: i + 1, count: "cmp", ask: true,
@@ -320,6 +322,7 @@ function draw() {
   drawCode(e);
   $("status").textContent = e.fin ?
     "Готово! Список відсортовано: " + nCmp + " порівнянь і " + nSwp + " обмінів." : e.text;
+  $("clk").textContent = "клік " + pos;
   $("cPass").textContent = pass; $("cCmp").textContent = nCmp; $("cSwp").textContent = nSwp;
   $("step").disabled = $("pass").disabled = !!e.fin;
 }
