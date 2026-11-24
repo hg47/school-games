@@ -67,6 +67,11 @@ input[type=text]{font-size:20px;padding:8px 10px;border:2px solid var(--line);bo
 .lane.fin .mini div{background:var(--done)}
 .hidden{display:none}
 .note{font-size:17px;color:var(--muted)}
+footer{color:var(--muted);font-size:15px;margin:10px 0 28px;line-height:1.7;text-align:center}
+footer a{color:var(--muted)}
+footer a:hover{color:var(--ink)}
+.back{font-size:17px;color:var(--btn);text-decoration:none;margin-left:auto;margin-right:8px}
+.back:hover{text-decoration:underline}
 #clk{position:absolute;right:16px;bottom:8px;font-size:15px;color:var(--muted);font-family:Consolas,monospace}
 .themebtn{position:fixed;top:18px;right:18px;z-index:60;display:grid;place-items:center;width:36px;height:36px;padding:0;cursor:pointer;border-radius:999px;color:var(--muted);background:var(--card);border:1px solid var(--line)}
 .themebtn:hover{color:var(--ink)}
@@ -79,6 +84,7 @@ input[type=text]{font-size:20px;padding:8px 10px;border:2px solid var(--line);bo
   <button class="tab on" data-mode="bubble">Метод обміну</button>
   <button class="tab" data-mode="select">Метод вибору</button>
   <button class="tab" data-mode="race">Перегони</button>
+  <a class="back" href="../trenazhery.html">&#8592; до тренажерів</a>
 </header>
 
 <main>
@@ -137,6 +143,10 @@ input[type=text]{font-size:20px;padding:8px 10px;border:2px solid var(--line);bo
     </div>
   </section>
 </main>
+
+<footer>Інтерактивний матеріал до уроку · тема «Алгоритми та програми»<br>
+© 2025–2026 Процюк О. К. · вчитель інформатики · Харківський ліцей № 47<br>
+<a href="../trenazhery.html">&#8592; до тренажерів</a> &nbsp;·&nbsp; <a href="../about.html" data-doc>Про сайт і дані</a></footer>
 
 <script>
 "use strict";
